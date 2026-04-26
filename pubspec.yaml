@@ -1,0 +1,71 @@
+name: app_invisivel
+description: "MVP de aplicação de segurança privada com foco em anonimato extremo e anti-rastreio."
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management & Dependency Injection
+  flutter_bloc: ^8.1.5
+  get_it: ^7.6.4
+  dartz: ^0.10.1
+  equatable: ^2.0.5
+  
+  # Networking & HTTP
+  dio: ^5.3.3
+  http2: ^2.3.0
+  
+  # Criptografia & Segurança
+  pointycastle: ^3.7.3
+  encrypt: ^5.0.3
+  crypto: ^3.0.3
+  flutter_secure_storage: ^9.0.0
+  
+  # VPN & Network Management
+  connectivity_plus: ^5.0.0
+  network_info_plus: ^4.1.0
+  
+  # Device Info & Integrity
+  device_info_plus: ^10.0.0
+  root_jailbreak_detector: ^0.5.4
+  
+  # Storage & Database
+  sqflite: ^2.3.0
+  path_provider: ^2.1.0
+  
+  # UI & Design
+  flutter_animate: ^4.4.0
+  lottie: ^2.6.0
+  
+  # JSON Serialization
+  json_annotation: ^4.8.1
+  
+  # Logging & Monitoring
+  logger: ^2.1.0
+  
+  # UUID Generation
+  uuid: ^4.0.0
+  
+  # Platform Channels
+  permission_handler: ^12.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.9
+  json_serializable: ^6.7.1
+  bloc_test: ^9.1.0
+  mocktail: ^1.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/animations/
+    - assets/configs/
