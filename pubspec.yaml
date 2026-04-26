@@ -32,7 +32,6 @@ dependencies:
   
   # Device Info & Integrity
   device_info_plus: ^10.0.0
-  flutter_jailbreak_detection: ^1.7.0
   
   # Storage & Database
   sqflite: ^2.3.0
