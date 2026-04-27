@@ -36,12 +36,6 @@
 @import permission_handler_apple;
 #endif
 
-#if __has_include(<root_jailbreak_detector/RootJailbreakDetectorPlugin.h>)
-#import <root_jailbreak_detector/RootJailbreakDetectorPlugin.h>
-#else
-@import root_jailbreak_detector;
-#endif
-
 #if __has_include(<sqflite_darwin/SqflitePlugin.h>)
 #import <sqflite_darwin/SqflitePlugin.h>
 #else
@@ -56,7 +50,6 @@
   [FlutterSecureStoragePlugin registerWithRegistrar:[registry registrarForPlugin:@"FlutterSecureStoragePlugin"]];
   [FPPNetworkInfoPlusPlugin registerWithRegistrar:[registry registrarForPlugin:@"FPPNetworkInfoPlusPlugin"]];
   [PermissionHandlerPlugin registerWithRegistrar:[registry registrarForPlugin:@"PermissionHandlerPlugin"]];
-  [RootJailbreakDetectorPlugin registerWithRegistrar:[registry registrarForPlugin:@"RootJailbreakDetectorPlugin"]];
   [SqflitePlugin registerWithRegistrar:[registry registrarForPlugin:@"SqflitePlugin"]];
 }
 
