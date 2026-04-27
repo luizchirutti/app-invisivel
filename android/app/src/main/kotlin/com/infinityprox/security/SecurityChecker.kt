@@ -224,9 +224,14 @@ class SecurityChecker(private val context: Context) {
         ) + customBlocklist
 
         return try {
-            val installedApps = context.packageManager.getInstalledApplications(
-                PackageManager.ApplicationInfoFlags.of(0)
-            )
+            val installedApps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getInstalledApplications(
+                    PackageManager.ApplicationInfoFlags.of(0),
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getInstalledApplications(0)
+            }
 
             installedApps
                 .mapNotNull { app ->
