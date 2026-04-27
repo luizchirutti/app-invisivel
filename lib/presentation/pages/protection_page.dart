@@ -16,6 +16,159 @@ class ProtectionPage extends StatefulWidget {
 class _ProtectionPageState extends State<ProtectionPage> {
   final List<String> _logEntries = [];
 
+  int _coverageScore(ProtectionStatus status) {
+    final checks = [
+      status.isVPNActive,
+      status.isKillSwitchActive,
+      status.dohEnabled,
+      status.antiFingerprinting,
+      status.threatDetectionActive,
+    ];
+
+    final activeCount = checks.where((item) => item).length;
+    return ((activeCount / checks.length) * 100).round();
+  }
+
+  String _confidenceMessage(ProtectionStatus status) {
+    final score = _coverageScore(status);
+    if (score >= 90 && status.activeThreats.isEmpty) {
+      return 'Excelente: sua sessao esta com cobertura de protecao muito alta.';
+    }
+    if (score >= 60) {
+      return 'Boa: suas camadas principais estao ligadas e monitoradas.';
+    }
+    return 'Atencao: ative a protecao para elevar sua cobertura de seguranca.';
+  }
+
+  Widget _buildProtectionAgainstItem({
+    required String risk,
+    required bool protected,
+    required String details,
+  }) {
+    final color = protected ? Colors.green : Colors.orange;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: protected ? Colors.green[50] : Colors.orange[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: protected ? Colors.green[200]! : Colors.orange[200]!),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            protected ? Icons.shield : Icons.info_outline,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  risk,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(details, style: const TextStyle(fontSize: 11)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProtectionConfidencePanel(ProtectionStatus status) {
+    final score = _coverageScore(status);
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Seu nivel de protecao agora',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: score / 100,
+                      minHeight: 10,
+                      backgroundColor: Colors.grey[300],
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        score >= 80
+                            ? Colors.green
+                            : score >= 50
+                                ? Colors.orange
+                                : Colors.red,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '$score%',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(_confidenceMessage(status), style: const TextStyle(fontSize: 12)),
+            const SizedBox(height: 14),
+            const Text(
+              'Voce esta protegido contra',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            _buildProtectionAgainstItem(
+              risk: 'Vazamento de DNS',
+              protected: status.dohEnabled,
+              details: status.dohEnabled
+                  ? 'DoH ligado para reduzir exposicao das consultas de dominio.'
+                  : 'Ative DoH para criptografar consultas DNS.',
+            ),
+            _buildProtectionAgainstItem(
+              risk: 'Exposicao de identidade digital',
+              protected: status.antiFingerprinting,
+              details: status.antiFingerprinting
+                  ? 'Headers e metadados sao mascarados para reduzir rastreio.'
+                  : 'Ative anti-fingerprinting para reduzir correlacao de sessao.',
+            ),
+            _buildProtectionAgainstItem(
+              risk: 'Queda de tunel com vazamento de trafego',
+              protected: status.isKillSwitchActive,
+              details: status.isKillSwitchActive
+                  ? 'Kill Switch habilitado para bloquear trafego em caso de queda.'
+                  : 'Ative Kill Switch para evitar vazamento em desconexao.',
+            ),
+            _buildProtectionAgainstItem(
+              risk: 'Risco de ambiente comprometido',
+              protected: status.threatDetectionActive,
+              details: status.threatDetectionActive
+                  ? 'Monitoramento de integridade ativo com analise de ameaças.'
+                  : 'Ative deteccao continua para alertas de integridade.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   ProtectionStatus _statusFromState(ProtectionState state) {
     if (state is ProtectionActive) {
       return state.status;
@@ -357,6 +510,15 @@ class _ProtectionPageState extends State<ProtectionPage> {
                             child: CircularProgressIndicator(),
                           );
                         }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Bloco de confianca e protecoes detalhadas
+                    BlocBuilder<ProtectionBloc, ProtectionState>(
+                      builder: (context, state) {
+                        final status = _statusFromState(state);
+                        return _buildProtectionConfidencePanel(status);
                       },
                     ),
                     const SizedBox(height: 24),
