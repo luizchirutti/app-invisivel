@@ -160,8 +160,16 @@ class SecurityChecker(private val context: Context) {
         return issues
     }
 
-    fun runAdvancedSecurityScan(): Map<String, Any> {
-        val suspiciousApps = detectSuspiciousApps()
+    fun runAdvancedSecurityScan(config: Map<String, Any>? = null): Map<String, Any> {
+        val customBlocklist = ((config?.get("customBlocklist") as? List<*>) ?: emptyList<Any>())
+            .mapNotNull { it?.toString()?.trim()?.takeIf { value -> value.isNotEmpty() } }
+            .toSet()
+
+        val customAllowlist = ((config?.get("customAllowlist") as? List<*>) ?: emptyList<Any>())
+            .mapNotNull { it?.toString()?.trim()?.takeIf { value -> value.isNotEmpty() } }
+            .toSet()
+
+        val suspiciousApps = detectSuspiciousApps(customBlocklist, customAllowlist)
         val rooted = isDeviceRooted()
         val emulator = isEmulator()
         val mock = isMockLocationEnabled()
@@ -198,7 +206,10 @@ class SecurityChecker(private val context: Context) {
         )
     }
 
-    private fun detectSuspiciousApps(): List<String> {
+    private fun detectSuspiciousApps(
+        customBlocklist: Set<String>,
+        customAllowlist: Set<String>,
+    ): List<String> {
         val suspiciousPackages = setOf(
             "com.cerberus",
             "com.flexispy.android",
@@ -210,7 +221,7 @@ class SecurityChecker(private val context: Context) {
             "com.callrecorder.auto",
             "com.cube.acr",
             "com.google.android.apps.work.clouddpc",
-        )
+        ) + customBlocklist
 
         return try {
             val installedApps = context.packageManager.getInstalledApplications(
@@ -228,7 +239,15 @@ class SecurityChecker(private val context: Context) {
                         lower.contains("record") ||
                         lower.contains("tracker")
 
-                    if (packageMatched || keywordMatched) pkg else null
+                    if (!(packageMatched || keywordMatched)) {
+                        return@mapNotNull null
+                    }
+
+                    val allowed = customAllowlist.any {
+                        it.equals(pkg, ignoreCase = true)
+                    }
+
+                    if (allowed) null else pkg
                 }
                 .distinct()
                 .take(20)

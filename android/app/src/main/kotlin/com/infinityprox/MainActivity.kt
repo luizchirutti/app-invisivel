@@ -55,7 +55,8 @@ class MainActivity: FlutterActivity() {
                         isEmulator(result)
                     }
                     "runAdvancedSecurityScan" -> {
-                        runAdvancedSecurityScan(result)
+                        val config = call.arguments as? Map<String, Any>
+                        runAdvancedSecurityScan(config, result)
                     }
                     else -> result.notImplemented()
                 }
@@ -172,10 +173,10 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    private fun runAdvancedSecurityScan(result: MethodChannel.Result) {
+    private fun runAdvancedSecurityScan(config: Map<String, Any>?, result: MethodChannel.Result) {
         try {
             val checker = SecurityChecker(this)
-            val scan = checker.runAdvancedSecurityScan()
+            val scan = checker.runAdvancedSecurityScan(config)
             result.success(scan)
         } catch (e: Exception) {
             result.error("ADV_SECURITY_SCAN_ERROR", e.message, null)

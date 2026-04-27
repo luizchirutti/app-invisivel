@@ -68,6 +68,12 @@ class _ProtectionPageState extends State<ProtectionPage> {
   bool _phoneTapShieldEnabled = true;
   bool _autoBlockOnCriticalRisk = true;
   SecurityScanResult? _lastScan;
+  List<String> _customBlocklistPackages = [
+    'com.flexispy.android',
+    'com.mspy.android',
+    'com.cerberus',
+  ];
+  List<String> _customAllowlistPackages = [];
 
   int _coverageScore(ProtectionStatus status) {
     final checks = [
@@ -327,6 +333,10 @@ class _ProtectionPageState extends State<ProtectionPage> {
         try {
           final nativeScan = await _securityChannel.invokeMapMethod<String, dynamic>(
             'runAdvancedSecurityScan',
+            {
+              'customBlocklist': _customBlocklistPackages,
+              'customAllowlist': _customAllowlistPackages,
+            },
           );
 
           if (nativeScan != null) {
@@ -351,6 +361,29 @@ class _ProtectionPageState extends State<ProtectionPage> {
           }
         } catch (_) {
           findings.add('Varredura nativa avancada nao disponivel neste dispositivo.');
+        }
+      }
+
+      if (suspiciousApps.isNotEmpty && _customAllowlistPackages.isNotEmpty) {
+        suspiciousApps = suspiciousApps
+            .where(
+              (pkg) => !_customAllowlistPackages.any(
+                (allowed) => pkg.toLowerCase() == allowed.toLowerCase(),
+              ),
+            )
+            .toList();
+      }
+
+      if (suspiciousApps.isNotEmpty && _customBlocklistPackages.isNotEmpty) {
+        final customHits = suspiciousApps.where(
+          (pkg) => _customBlocklistPackages.any(
+            (blocked) => pkg.toLowerCase() == blocked.toLowerCase(),
+          ),
+        );
+        if (customHits.isNotEmpty) {
+          findings.add(
+            'Lista negra personalizada acionada: ${customHits.join(', ')}',
+          );
         }
       }
 
@@ -481,6 +514,92 @@ class _ProtectionPageState extends State<ProtectionPage> {
     );
   }
 
+  Future<void> _editPackageList({
+    required String title,
+    required bool isBlocklist,
+  }) async {
+    final currentList = isBlocklist
+        ? _customBlocklistPackages
+        : _customAllowlistPackages;
+    final controller = TextEditingController(text: currentList.join(', '));
+
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: 'com.app.exemplo, com.outro.pacote',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final values = controller.text
+                    .split(',')
+                    .map((e) => e.trim())
+                    .where((e) => e.isNotEmpty)
+                    .toSet()
+                    .toList();
+                Navigator.of(context).pop(values);
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        if (isBlocklist) {
+          _customBlocklistPackages = result;
+        } else {
+          _customAllowlistPackages = result;
+        }
+      });
+      _addLogEntry(
+        isBlocklist
+            ? '⚙️ Lista negra atualizada (${result.length} itens).'
+            : '⚙️ Lista branca atualizada (${result.length} itens).',
+      );
+    }
+  }
+
+  Widget _buildPackageListChips(List<String> values, Color color) {
+    if (values.isEmpty) {
+      return const Text(
+        'Nenhum item configurado',
+        style: TextStyle(fontSize: 11),
+      );
+    }
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: values
+          .map(
+            (item) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(item, style: const TextStyle(fontSize: 10)),
+            ),
+          )
+          .toList(),
+    );
+  }
+
   Widget _buildSecurityScanPanel() {
     return Card(
       elevation: 4,
@@ -568,6 +687,51 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 });
               },
             ),
+            const SizedBox(height: 6),
+            const Text(
+              'Deteccao personalizada de apps suspeitos',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _editPackageList(
+                      title: 'Editar lista negra (apps suspeitos)',
+                      isBlocklist: true,
+                    ),
+                    icon: const Icon(Icons.block),
+                    label: const Text('Editar lista negra'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _editPackageList(
+                      title: 'Editar lista branca (apps permitidos)',
+                      isBlocklist: false,
+                    ),
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('Editar lista branca'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Lista negra ativa:',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            _buildPackageListChips(_customBlocklistPackages, Colors.red.shade100),
+            const SizedBox(height: 8),
+            const Text(
+              'Lista branca ativa:',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            _buildPackageListChips(_customAllowlistPackages, Colors.green.shade100),
             if (_lastScan != null) ...[
               const Divider(height: 18),
               Row(
