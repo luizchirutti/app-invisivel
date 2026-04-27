@@ -2,6 +2,8 @@
 package com.infinityprox.security
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
@@ -156,6 +158,127 @@ class SecurityChecker(private val context: Context) {
         }
 
         return issues
+    }
+
+    fun runAdvancedSecurityScan(): Map<String, Any> {
+        val suspiciousApps = detectSuspiciousApps()
+        val rooted = isDeviceRooted()
+        val emulator = isEmulator()
+        val mock = isMockLocationEnabled()
+        val devMode = isDeveloperModeEnabled()
+        val monitoringRisk = hasMonitoringRisk()
+        val phoneTapRisk = hasPhoneTapRisk(suspiciousApps)
+
+        val hasUnsafeApps = suspiciousApps.isNotEmpty
+        val hasMalware = rooted || suspiciousApps.any {
+            it.contains("spy", ignoreCase = true) ||
+            it.contains("malware", ignoreCase = true)
+        }
+        val hasTracking = hasUnsafeApps || devMode
+        val hasActiveMonitoring = monitoringRisk || mock || emulator
+
+        val findings = mutableListOf<String>()
+        if (hasUnsafeApps) findings.add("Apps suspeitos instalados detectados")
+        if (hasMalware) findings.add("Sinais de malware/spyware detectados")
+        if (hasTracking) findings.add("Sinais de rastreio/interceptacao detectados")
+        if (hasActiveMonitoring) findings.add("Monitoramento ativo suspeito detectado")
+        if (phoneTapRisk) findings.add("Possivel risco de escuta telefonica detectado")
+
+        return mapOf(
+            "hasUnsafeApps" to hasUnsafeApps,
+            "hasMalware" to hasMalware,
+            "hasTracking" to hasTracking,
+            "hasActiveMonitoring" to hasActiveMonitoring,
+            "hasPhoneTapRisk" to phoneTapRisk,
+            "isRooted" to rooted,
+            "isEmulator" to emulator,
+            "isMockLocationEnabled" to mock,
+            "suspiciousApps" to suspiciousApps,
+            "findings" to findings,
+        )
+    }
+
+    private fun detectSuspiciousApps(): List<String> {
+        val suspiciousPackages = setOf(
+            "com.cerberus",
+            "com.flexispy.android",
+            "com.mspy.android",
+            "com.spyera",
+            "com.eyezy",
+            "com.thetruthspy",
+            "com.titanium.trackview",
+            "com.callrecorder.auto",
+            "com.cube.acr",
+            "com.google.android.apps.work.clouddpc",
+        )
+
+        return try {
+            val installedApps = context.packageManager.getInstalledApplications(
+                PackageManager.ApplicationInfoFlags.of(0)
+            )
+
+            installedApps
+                .mapNotNull { app ->
+                    val pkg = app.packageName ?: return@mapNotNull null
+                    val lower = pkg.lowercase()
+
+                    val packageMatched = suspiciousPackages.contains(pkg)
+                    val keywordMatched = lower.contains("spy") ||
+                        lower.contains("monitor") ||
+                        lower.contains("record") ||
+                        lower.contains("tracker")
+
+                    if (packageMatched || keywordMatched) pkg else null
+                }
+                .distinct()
+                .take(20)
+        } catch (e: Exception) {
+            Log.w(TAG, "Erro ao verificar apps suspeitos", e)
+            emptyList()
+        }
+    }
+
+    private fun hasMonitoringRisk(): Boolean {
+        return try {
+            val enabledServices = Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+            ) ?: ""
+
+            enabledServices.isNotBlank()
+        } catch (e: Exception) {
+            Log.w(TAG, "Erro ao verificar servicos de monitoramento", e)
+            false
+        }
+    }
+
+    private fun isDeveloperModeEnabled(): Boolean {
+        return try {
+            Settings.Global.getInt(
+                context.contentResolver,
+                Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
+                0,
+            ) == 1
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun hasPhoneTapRisk(suspiciousApps: List<String>): Boolean {
+        val recorderSignals = suspiciousApps.any {
+            it.contains("record", ignoreCase = true) ||
+            it.contains("spy", ignoreCase = true) ||
+            it.contains("call", ignoreCase = true)
+        }
+
+        val micPermissionSignals = try {
+            val micCheck = context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+            micCheck == PackageManager.PERMISSION_GRANTED
+        } catch (e: Exception) {
+            false
+        }
+
+        return recorderSignals || micPermissionSignals
     }
 
     private fun getSystemProperty(key: String): String {

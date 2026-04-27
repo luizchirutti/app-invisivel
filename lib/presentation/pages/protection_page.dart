@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../bloc/protection_bloc.dart';
 import '../widgets/protection_widgets.dart';
@@ -59,10 +60,13 @@ class ProtectionPage extends StatefulWidget {
 class _ProtectionPageState extends State<ProtectionPage> {
   final List<String> _logEntries = [];
   final DeviceIntegrityService _integrityService = DeviceIntegrityService();
+  static const MethodChannel _vpnChannel = MethodChannel('com.infinityprox/vpn');
+  static const MethodChannel _securityChannel = MethodChannel('com.infinityprox/security');
 
   bool _isScanning = false;
   bool _runScanBeforeActivation = true;
   bool _phoneTapShieldEnabled = true;
+  bool _autoBlockOnCriticalRisk = true;
   SecurityScanResult? _lastScan;
 
   int _coverageScore(ProtectionStatus status) {
@@ -218,6 +222,70 @@ class _ProtectionPageState extends State<ProtectionPage> {
     );
   }
 
+  Widget _buildSessionCertificate(ProtectionStatus status) {
+    final scan = _lastScan;
+    final coverage = _coverageScore(status);
+    final isCertified =
+        status.isFullyProtected &&
+        coverage == 100 &&
+        scan != null &&
+        !scan.hasCriticalRisk;
+
+    final certificateId =
+        'SEC-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}';
+
+    return Card(
+      elevation: 4,
+      color: isCertified ? Colors.green[50] : Colors.orange[50],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: isCertified ? Colors.green : Colors.orange),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isCertified ? Icons.verified_user : Icons.gpp_maybe,
+                  color: isCertified ? Colors.green[800] : Colors.orange[800],
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isCertified
+                        ? 'Certificado de Sessao Segura: 100% protegido'
+                        : 'Certificado de Sessao: cobertura parcial',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isCertified
+                  ? 'Seu dispositivo e sessao passaram na varredura e todas as camadas criticas estao ativas.'
+                  : 'Execute varredura e ative protecao total para elevar o certificado a 100% seguro.',
+              style: const TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'ID do certificado: $certificateId',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Emitido em: ${DateTime.now().toLocal()}',
+              style: const TextStyle(fontSize: 11),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   ProtectionStatus _statusFromState(ProtectionState state) {
     if (state is ProtectionActive) {
       return state.status;
@@ -246,6 +314,46 @@ class _ProtectionPageState extends State<ProtectionPage> {
       final findings = <String>[...integrity.threats];
 
       bool hasPhoneTapRisk = false;
+      bool hasUnsafeApps =
+          integrity.isRooted || integrity.isJailbroken || integrity.hasMockLocation;
+      bool hasMalware = integrity.isRooted || integrity.isJailbroken;
+      bool hasTracking = integrity.hasUnauthorizedProxies;
+      bool hasActiveMonitoring =
+          integrity.hasUnauthorizedProxies || integrity.hasMockLocation;
+
+      List<String> suspiciousApps = [];
+
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          final nativeScan = await _securityChannel.invokeMapMethod<String, dynamic>(
+            'runAdvancedSecurityScan',
+          );
+
+          if (nativeScan != null) {
+            hasUnsafeApps = (nativeScan['hasUnsafeApps'] as bool?) ?? hasUnsafeApps;
+            hasMalware = (nativeScan['hasMalware'] as bool?) ?? hasMalware;
+            hasTracking = (nativeScan['hasTracking'] as bool?) ?? hasTracking;
+            hasActiveMonitoring =
+                (nativeScan['hasActiveMonitoring'] as bool?) ?? hasActiveMonitoring;
+            hasPhoneTapRisk = (nativeScan['hasPhoneTapRisk'] as bool?) ?? hasPhoneTapRisk;
+
+            suspiciousApps = ((nativeScan['suspiciousApps'] as List?) ?? const [])
+                .map((item) => item.toString())
+                .toList();
+            final nativeFindings = ((nativeScan['findings'] as List?) ?? const [])
+                .map((item) => item.toString())
+                .toList();
+
+            findings.addAll(nativeFindings);
+            if (suspiciousApps.isNotEmpty) {
+              findings.add('Apps suspeitos: ${suspiciousApps.join(', ')}');
+            }
+          }
+        } catch (_) {
+          findings.add('Varredura nativa avancada nao disponivel neste dispositivo.');
+        }
+      }
+
       if (!kIsWeb) {
         try {
           final micStatus = await Permission.microphone.status;
@@ -260,13 +368,6 @@ class _ProtectionPageState extends State<ProtectionPage> {
           findings.add('Nao foi possivel validar permissao de audio/telefone.');
         }
       }
-
-      final hasUnsafeApps =
-          integrity.isRooted || integrity.isJailbroken || integrity.hasMockLocation;
-      final hasMalware = integrity.isRooted || integrity.isJailbroken;
-      final hasTracking = integrity.hasUnauthorizedProxies;
-      final hasActiveMonitoring =
-          integrity.hasUnauthorizedProxies || integrity.hasMockLocation;
 
       final isProtectionActive =
           context.read<ProtectionBloc>().state is ProtectionActive;
@@ -303,6 +404,17 @@ class _ProtectionPageState extends State<ProtectionPage> {
           _isScanning = false;
         });
       }
+    }
+  }
+
+  Future<void> _activateEmergencyBlock() async {
+    try {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        await _vpnChannel.invokeMapMethod<String, dynamic>('triggerEmergencyBlock');
+      }
+      _addLogEntry('🚨 Bloqueio automatico ativado por risco critico detectado.');
+    } catch (_) {
+      _addLogEntry('⚠️ Falha ao acionar bloqueio nativo de emergencia.');
     }
   }
 
@@ -435,6 +547,24 @@ class _ProtectionPageState extends State<ProtectionPage> {
               onChanged: (value) {
                 setState(() {
                   _phoneTapShieldEnabled = value;
+                });
+              },
+            ),
+            SwitchListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Bloqueio automatico quando risco for critico',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                'Se detectar risco critico, bloqueia automaticamente e impede ativacao.',
+                style: TextStyle(fontSize: 11),
+              ),
+              value: _autoBlockOnCriticalRisk,
+              onChanged: (value) {
+                setState(() {
+                  _autoBlockOnCriticalRisk = value;
                 });
               },
             ),
@@ -680,6 +810,13 @@ class _ProtectionPageState extends State<ProtectionPage> {
     } else {
       if (_runScanBeforeActivation) {
         final scanResult = await _runSecurityScan(silent: true);
+
+        if (_autoBlockOnCriticalRisk && scanResult.hasCriticalRisk) {
+          await _activateEmergencyBlock();
+          _addLogEntry('🛑 Ativacao bloqueada automaticamente por risco critico.');
+          return;
+        }
+
         final canProceed = await _confirmActivationWithRisk(scanResult);
         if (!canProceed) {
           _addLogEntry('🛑 Ativacao cancelada apos varredura de risco.');
@@ -853,6 +990,15 @@ class _ProtectionPageState extends State<ProtectionPage> {
                       builder: (context, state) {
                         final status = _statusFromState(state);
                         return _buildProtectionConfidencePanel(status);
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Certificado visual de sessao segura
+                    BlocBuilder<ProtectionBloc, ProtectionState>(
+                      builder: (context, state) {
+                        final status = _statusFromState(state);
+                        return _buildSessionCertificate(status);
                       },
                     ),
                     const SizedBox(height: 24),

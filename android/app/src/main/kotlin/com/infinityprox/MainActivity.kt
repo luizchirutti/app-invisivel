@@ -34,6 +34,9 @@ class MainActivity: FlutterActivity() {
                         val enabled = call.argument<Boolean>("enabled") ?: false
                         setKillSwitch(enabled, result)
                     }
+                    "triggerEmergencyBlock" -> {
+                        triggerEmergencyBlock(result)
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -50,6 +53,9 @@ class MainActivity: FlutterActivity() {
                     }
                     "isEmulator" -> {
                         isEmulator(result)
+                    }
+                    "runAdvancedSecurityScan" -> {
+                        runAdvancedSecurityScan(result)
                     }
                     else -> result.notImplemented()
                 }
@@ -124,6 +130,16 @@ class MainActivity: FlutterActivity() {
         }
     }
 
+    private fun triggerEmergencyBlock(result: MethodChannel.Result) {
+        try {
+            val killSwitch = KillSwitchManager(this)
+            killSwitch.triggerKillSwitch()
+            result.success(mapOf("blocked" to true))
+        } catch (e: Exception) {
+            result.error("EMERGENCY_BLOCK_ERROR", e.message, null)
+        }
+    }
+
     // ==================== Security Methods ====================
 
     private fun checkDeviceSecurity(result: MethodChannel.Result) {
@@ -153,6 +169,16 @@ class MainActivity: FlutterActivity() {
             result.success(mapOf("isEmulator" to emulator))
         } catch (e: Exception) {
             result.error("EMULATOR_CHECK_ERROR", e.message, null)
+        }
+    }
+
+    private fun runAdvancedSecurityScan(result: MethodChannel.Result) {
+        try {
+            val checker = SecurityChecker(this)
+            val scan = checker.runAdvancedSecurityScan()
+            result.success(scan)
+        } catch (e: Exception) {
+            result.error("ADV_SECURITY_SCAN_ERROR", e.message, null)
         }
     }
 }
