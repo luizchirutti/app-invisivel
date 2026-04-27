@@ -1,9 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../bloc/protection_bloc.dart';
 import '../widgets/protection_widgets.dart';
 import '../../domain/entities/entities.dart';
+import '../../security/device_integrity/device_integrity_service.dart';
+
+class SecurityScanResult {
+  final bool hasUnsafeApps;
+  final bool hasMalware;
+  final bool hasTracking;
+  final bool hasActiveMonitoring;
+  final bool hasPhoneTapRisk;
+  final bool phoneTapBlockingEnabled;
+  final List<String> findings;
+  final DateTime scannedAt;
+
+  SecurityScanResult({
+    required this.hasUnsafeApps,
+    required this.hasMalware,
+    required this.hasTracking,
+    required this.hasActiveMonitoring,
+    required this.hasPhoneTapRisk,
+    required this.phoneTapBlockingEnabled,
+    required this.findings,
+    required this.scannedAt,
+  });
+
+  bool get hasCriticalRisk =>
+      hasUnsafeApps ||
+      hasMalware ||
+      hasTracking ||
+      hasActiveMonitoring ||
+      hasPhoneTapRisk;
+
+  int get safetyScore {
+    final signals = [
+      !hasUnsafeApps,
+      !hasMalware,
+      !hasTracking,
+      !hasActiveMonitoring,
+      !hasPhoneTapRisk,
+    ];
+    final safeCount = signals.where((s) => s).length;
+    return ((safeCount / signals.length) * 100).round();
+  }
+}
 
 /// Página principal de proteção
 class ProtectionPage extends StatefulWidget {
@@ -15,6 +58,12 @@ class ProtectionPage extends StatefulWidget {
 
 class _ProtectionPageState extends State<ProtectionPage> {
   final List<String> _logEntries = [];
+  final DeviceIntegrityService _integrityService = DeviceIntegrityService();
+
+  bool _isScanning = false;
+  bool _runScanBeforeActivation = true;
+  bool _phoneTapShieldEnabled = true;
+  SecurityScanResult? _lastScan;
 
   int _coverageScore(ProtectionStatus status) {
     final checks = [
@@ -187,6 +236,274 @@ class _ProtectionPageState extends State<ProtectionPage> {
     );
   }
 
+  Future<SecurityScanResult> _runSecurityScan({bool silent = false}) async {
+    setState(() {
+      _isScanning = true;
+    });
+
+    try {
+      final integrity = await _integrityService.checkDeviceIntegrity();
+      final findings = <String>[...integrity.threats];
+
+      bool hasPhoneTapRisk = false;
+      if (!kIsWeb) {
+        try {
+          final micStatus = await Permission.microphone.status;
+          final phoneStatus = await Permission.phone.status;
+          hasPhoneTapRisk = micStatus.isGranted || phoneStatus.isGranted;
+          if (hasPhoneTapRisk) {
+            findings.add(
+              'Risco de escuta telefonica: permissoes sensiveis de audio/telefone ativas.',
+            );
+          }
+        } catch (_) {
+          findings.add('Nao foi possivel validar permissao de audio/telefone.');
+        }
+      }
+
+      final hasUnsafeApps =
+          integrity.isRooted || integrity.isJailbroken || integrity.hasMockLocation;
+      final hasMalware = integrity.isRooted || integrity.isJailbroken;
+      final hasTracking = integrity.hasUnauthorizedProxies;
+      final hasActiveMonitoring =
+          integrity.hasUnauthorizedProxies || integrity.hasMockLocation;
+
+      final isProtectionActive =
+          context.read<ProtectionBloc>().state is ProtectionActive;
+
+      final result = SecurityScanResult(
+        hasUnsafeApps: hasUnsafeApps,
+        hasMalware: hasMalware,
+        hasTracking: hasTracking,
+        hasActiveMonitoring: hasActiveMonitoring,
+        hasPhoneTapRisk: hasPhoneTapRisk,
+        phoneTapBlockingEnabled: _phoneTapShieldEnabled && isProtectionActive,
+        findings: findings,
+        scannedAt: DateTime.now(),
+      );
+
+      if (mounted) {
+        setState(() {
+          _lastScan = result;
+        });
+
+        if (!silent) {
+          _addLogEntry(
+            result.hasCriticalRisk
+                ? '⚠️ Varredura detectou riscos - score ${result.safetyScore}%'
+                : '✅ Varredura concluida - dispositivo seguro (${result.safetyScore}%)',
+          );
+        }
+      }
+
+      return result;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+        });
+      }
+    }
+  }
+
+  Future<bool> _confirmActivationWithRisk(SecurityScanResult result) async {
+    if (!result.hasCriticalRisk) {
+      return true;
+    }
+
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Riscos detectados na varredura'),
+          content: Text(
+            'Foram encontrados sinais de risco no dispositivo.\n'
+            'Score atual: ${result.safetyScore}%\n\n'
+            'Deseja ativar a protecao total mesmo assim?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Ativar mesmo assim'),
+            ),
+          ],
+        );
+      },
+    );
+
+    return shouldProceed ?? false;
+  }
+
+  Widget _buildScanResultRow(String label, bool issueFound) {
+    final ok = !issueFound;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(
+            ok ? Icons.verified : Icons.warning_amber_rounded,
+            color: ok ? Colors.green : Colors.orange,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+          Text(
+            ok ? 'OK' : 'RISCO',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: ok ? Colors.green : Colors.orange,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecurityScanPanel() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Varredura Inteligente do Dispositivo',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Execute a varredura para validar risco antes da ativacao total da protecao.',
+              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isScanning ? null : () => _runSecurityScan(),
+                    icon: _isScanning
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.security),
+                    label: Text(_isScanning ? 'Varrendo...' : 'Fazer varredura agora'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SwitchListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Executar varredura antes da ativacao total',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+              value: _runScanBeforeActivation,
+              onChanged: (value) {
+                setState(() {
+                  _runScanBeforeActivation = value;
+                });
+              },
+            ),
+            SwitchListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Bloqueio reforcado contra escuta telefonica',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                'Aciona bloqueio agressivo quando a protecao total esta ativa.',
+                style: TextStyle(fontSize: 11),
+              ),
+              value: _phoneTapShieldEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _phoneTapShieldEnabled = value;
+                });
+              },
+            ),
+            if (_lastScan != null) ...[
+              const Divider(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Resultado da ultima varredura',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  Text(
+                    '${_lastScan!.safetyScore}% seguro',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: _lastScan!.safetyScore >= 80 ? Colors.green : Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              _buildScanResultRow(
+                'Verificar apps nao seguros',
+                _lastScan!.hasUnsafeApps,
+              ),
+              _buildScanResultRow(
+                'Verificar sinais de malware',
+                _lastScan!.hasMalware,
+              ),
+              _buildScanResultRow(
+                'Verificar rastreio e interceptacao',
+                _lastScan!.hasTracking,
+              ),
+              _buildScanResultRow(
+                'Verificar monitoramento ativo suspeito',
+                _lastScan!.hasActiveMonitoring,
+              ),
+              _buildScanResultRow(
+                'Verificar risco de escuta telefonica',
+                _lastScan!.hasPhoneTapRisk,
+              ),
+              _buildScanResultRow(
+                'Bloqueio anti-escuta em modo reforcado',
+                !_lastScan!.phoneTapBlockingEnabled,
+              ),
+              if (_lastScan!.findings.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Text(
+                    _lastScan!.findings.join('\n'),
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildFeatureDetail({
     required String title,
     required bool active,
@@ -355,14 +672,27 @@ class _ProtectionPageState extends State<ProtectionPage> {
     context.read<ProtectionBloc>().add(const GetStatusEvent());
   }
 
-  void _toggleProtection() {
+  Future<void> _toggleProtection() async {
     final state = context.read<ProtectionBloc>().state;
 
     if (state is ProtectionActive) {
       context.read<ProtectionBloc>().add(const StopProtectionEvent());
     } else {
+      if (_runScanBeforeActivation) {
+        final scanResult = await _runSecurityScan(silent: true);
+        final canProceed = await _confirmActivationWithRisk(scanResult);
+        if (!canProceed) {
+          _addLogEntry('🛑 Ativacao cancelada apos varredura de risco.');
+          return;
+        }
+      }
+
       final defaultConfig = AppConfiguration();
       context.read<ProtectionBloc>().add(StartProtectionEvent(defaultConfig));
+
+      if (_phoneTapShieldEnabled) {
+        _addLogEntry('🛡️ Escudo anti-escuta telefonica ativado com protecao total.');
+      }
     }
   }
 
@@ -438,6 +768,10 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 padding: const EdgeInsets.all(16),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    // Painel de varredura antes da ativacao total
+                    _buildSecurityScanPanel(),
+                    const SizedBox(height: 20),
+
                     // Botão Central de Proteção
                     Center(
                       child: BlocBuilder<ProtectionBloc, ProtectionState>(
