@@ -177,7 +177,7 @@ class SecurityChecker(private val context: Context) {
         val monitoringRisk = hasMonitoringRisk()
         val phoneTapRisk = hasPhoneTapRisk(suspiciousApps)
 
-        val hasUnsafeApps = suspiciousApps.isNotEmpty
+        val hasUnsafeApps = suspiciousApps.isNotEmpty()
         val hasMalware = rooted || suspiciousApps.any {
             it.contains("spy", ignoreCase = true) ||
             it.contains("malware", ignoreCase = true)
