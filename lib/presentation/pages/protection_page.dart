@@ -7,6 +7,8 @@ import '../bloc/protection_bloc.dart';
 import '../widgets/protection_widgets.dart';
 import '../../domain/entities/entities.dart';
 import '../../security/device_integrity/device_integrity_service.dart';
+import '../../services/notifications/security_alert_service.dart';
+import '../../services/security/duress_security_service.dart';
 
 class SecurityScanResult {
   final bool hasUnsafeApps;
@@ -60,6 +62,9 @@ class ProtectionPage extends StatefulWidget {
 class _ProtectionPageState extends State<ProtectionPage> {
   final List<String> _logEntries = [];
   final DeviceIntegrityService _integrityService = DeviceIntegrityService();
+  final SecurityAlertService _alertService = SecurityAlertService();
+  final DuressSecurityService _duressSecurityService = DuressSecurityService();
+  final TextEditingController _unlockController = TextEditingController();
   static const MethodChannel _vpnChannel = MethodChannel('com.infinityprox/vpn');
   static const MethodChannel _securityChannel = MethodChannel('com.infinityprox/security');
 
@@ -67,6 +72,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
   bool _runScanBeforeActivation = true;
   bool _phoneTapShieldEnabled = true;
   bool _autoBlockOnCriticalRisk = true;
+  bool _isDuressPinConfigured = false;
   SecurityScanResult? _lastScan;
   List<String> _customBlocklistPackages = [
     'com.flexispy.android',
@@ -420,6 +426,18 @@ class _ProtectionPageState extends State<ProtectionPage> {
         setState(() {
           _lastScan = result;
         });
+
+        if (result.hasCriticalRisk) {
+          await _alertService.upsertReminder(
+            reasonKey: 'suspicious_activity',
+            title: 'Atividade suspeita detectada',
+            body: result.findings.isNotEmpty
+                ? result.findings.first
+                : 'Foram detectados riscos no dispositivo.',
+          );
+        } else {
+          _alertService.clearReminder('suspicious_activity');
+        }
 
         if (!silent) {
           _addLogEntry(
@@ -798,6 +816,193 @@ class _ProtectionPageState extends State<ProtectionPage> {
     );
   }
 
+  Future<void> _loadDuressPinStatus() async {
+    final configured = await _duressSecurityService.isDuressPinConfigured();
+    if (!mounted) return;
+    setState(() {
+      _isDuressPinConfigured = configured;
+    });
+  }
+
+  Future<void> _configureDuressPin() async {
+    final pinController = TextEditingController();
+    final confirmController = TextEditingController();
+
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Configurar senha de coacao'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: pinController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'PIN de coacao (4-8 digitos)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Confirmar PIN',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final pin = pinController.text.trim();
+                final confirm = confirmController.text.trim();
+                final validLength = pin.length >= 4 && pin.length <= 8;
+                final validDigits = RegExp(r'^\d+$').hasMatch(pin);
+
+                if (!validLength || !validDigits || pin != confirm) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'PIN invalido. Use 4-8 digitos numericos e confirme corretamente.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+
+                await _duressSecurityService.saveDuressPin(pin);
+                if (!context.mounted) return;
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (created == true) {
+      await _loadDuressPinStatus();
+      _addLogEntry('🛡️ Senha de coacao configurada com sucesso.');
+    }
+  }
+
+  Future<void> _disableDuressPin() async {
+    await _duressSecurityService.disableDuressPin();
+    await _loadDuressPinStatus();
+    _addLogEntry('ℹ️ Senha de coacao desativada.');
+  }
+
+  Future<void> _handleUnlockAttempt() async {
+    final entered = _unlockController.text.trim();
+    if (entered.isEmpty) {
+      return;
+    }
+
+    final isDuress = await _duressSecurityService.verifyDuressPin(entered);
+    _unlockController.clear();
+
+    if (!isDuress) {
+      _addLogEntry('🔐 Tentativa de desbloqueio registrada.');
+      return;
+    }
+
+    await _duressSecurityService.executeLocalSecurityReset();
+    if (mounted) {
+      context.read<ProtectionBloc>().add(const StopProtectionEvent());
+    }
+
+    await _alertService.upsertReminder(
+      reasonKey: 'duress_triggered',
+      title: 'Modo de coacao acionado',
+      body: 'Reset local de seguranca executado. Verifique a conta imediatamente.',
+    );
+
+    if (!mounted) return;
+    _addLogEntry('🚨 Senha de coacao acionada: hard reset local executado.');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Operacao de seguranca executada.'),
+      ),
+    );
+    await _loadDuressPinStatus();
+  }
+
+  Widget _buildDuressPanel() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Senha de coacao (hard reset local)',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Quando este PIN e digitado no desbloqueio interno do app, dados locais sensiveis sao apagados e um alerta e disparado.',
+              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _configureDuressPin,
+                    icon: const Icon(Icons.password),
+                    label: Text(
+                      _isDuressPinConfigured
+                          ? 'Atualizar PIN de coacao'
+                          : 'Configurar PIN de coacao',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_isDuressPinConfigured) ...[
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: _disableDuressPin,
+                icon: const Icon(Icons.delete_forever),
+                label: const Text('Desativar PIN de coacao'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _unlockController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Tela de desbloqueio interno (PIN)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _handleUnlockAttempt,
+                  icon: const Icon(Icons.lock_open),
+                  label: const Text('Validar desbloqueio'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildFeatureDetail({
     required String title,
     required bool active,
@@ -964,6 +1169,13 @@ class _ProtectionPageState extends State<ProtectionPage> {
     super.initState();
     // Carregar status inicial
     context.read<ProtectionBloc>().add(const GetStatusEvent());
+    _loadDuressPinStatus();
+  }
+
+  @override
+  void dispose() {
+    _unlockController.dispose();
+    super.dispose();
   }
 
   Future<void> _toggleProtection() async {
@@ -1014,10 +1226,22 @@ class _ProtectionPageState extends State<ProtectionPage> {
           listener: (context, state) {
             if (state is ProtectionActive) {
               _addLogEntry('✅ VPN Conectada - ${DateTime.now().toIso8601String()}');
+              _alertService.clearReminder('app_disabled');
+              _alertService.clearReminder('protection_failure');
             } else if (state is ProtectionInactive) {
               _addLogEntry('🔓 VPN Desconectada - ${DateTime.now().toIso8601String()}');
+              _alertService.upsertReminder(
+                reasonKey: 'app_disabled',
+                title: 'Protecao desativada',
+                body: 'A protecao foi desativada. Reative para manter sua seguranca.',
+              );
             } else if (state is ProtectionError) {
               _addLogEntry('❌ Erro: ${state.message}');
+              _alertService.upsertReminder(
+                reasonKey: 'protection_failure',
+                title: 'Falha de seguranca detectada',
+                body: state.message,
+              );
             }
           },
           child: CustomScrollView(
@@ -1071,6 +1295,10 @@ class _ProtectionPageState extends State<ProtectionPage> {
                   delegate: SliverChildListDelegate([
                     // Painel de varredura antes da ativacao total
                     _buildSecurityScanPanel(),
+                    const SizedBox(height: 20),
+
+                    // Senha de coacao
+                    _buildDuressPanel(),
                     const SizedBox(height: 20),
 
                     // Botão Central de Proteção
