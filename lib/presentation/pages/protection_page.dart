@@ -905,8 +905,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
     required String pinLabel,
     required String confirmLabel,
   }) async {
-    final pinController = TextEditingController();
-    final confirmController = TextEditingController();
+    String pinValue = '';
+    String confirmValue = '';
     String? validationError;
 
     final result = await showDialog<String>(
@@ -920,11 +920,13 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
-                    controller: pinController,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     maxLength: 8,
                     obscureText: true,
+                    onChanged: (value) {
+                      pinValue = value.trim();
+                    },
                     decoration: InputDecoration(
                       labelText: pinLabel,
                       counterText: '',
@@ -932,23 +934,23 @@ class _ProtectionPageState extends State<ProtectionPage> {
                   ),
                   const SizedBox(height: 12),
                   TextField(
-                    controller: confirmController,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     maxLength: 8,
                     obscureText: true,
+                    onChanged: (value) {
+                      confirmValue = value.trim();
+                    },
                     decoration: InputDecoration(
                       labelText: confirmLabel,
                       counterText: '',
                       errorText: validationError,
                     ),
                     onSubmitted: (_) {
-                      final pin = pinController.text.trim();
-                      final confirm = confirmController.text.trim();
-                      final validLength = pin.length >= 4 && pin.length <= 8;
-                      final validDigits = RegExp(r'^\d+$').hasMatch(pin);
+                      final validLength = pinValue.length >= 4 && pinValue.length <= 8;
+                      final validDigits = RegExp(r'^\d+$').hasMatch(pinValue);
 
-                      if (!validLength || !validDigits || pin != confirm) {
+                      if (!validLength || !validDigits || pinValue != confirmValue) {
                         setDialogState(() {
                           validationError =
                               'PIN invalido. Use 4-8 digitos e confirme corretamente.';
@@ -956,7 +958,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                         return;
                       }
 
-                      Navigator.of(dialogContext).pop(pin);
+                      Navigator.of(dialogContext).pop(pinValue);
                     },
                   ),
                 ],
@@ -968,12 +970,10 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    final pin = pinController.text.trim();
-                    final confirm = confirmController.text.trim();
-                    final validLength = pin.length >= 4 && pin.length <= 8;
-                    final validDigits = RegExp(r'^\d+$').hasMatch(pin);
+                    final validLength = pinValue.length >= 4 && pinValue.length <= 8;
+                    final validDigits = RegExp(r'^\d+$').hasMatch(pinValue);
 
-                    if (!validLength || !validDigits || pin != confirm) {
+                    if (!validLength || !validDigits || pinValue != confirmValue) {
                       setDialogState(() {
                         validationError =
                             'PIN invalido. Use 4-8 digitos e confirme corretamente.';
@@ -981,7 +981,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                       return;
                     }
 
-                    Navigator.of(dialogContext).pop(pin);
+                    Navigator.of(dialogContext).pop(pinValue);
                   },
                   child: const Text('Salvar'),
                 ),
@@ -992,8 +992,6 @@ class _ProtectionPageState extends State<ProtectionPage> {
       },
     );
 
-    pinController.dispose();
-    confirmController.dispose();
     return result;
   }
 
