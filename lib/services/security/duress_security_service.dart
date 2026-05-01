@@ -24,6 +24,18 @@ class DuressSecurityService {
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
+  Future<void> _syncNativeSafetyFlags() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      final safetyModeEnabled = await isSafetyModeEnabled();
+      final unlockPinConfigured = await isUnlockPinConfigured();
+      await _duressChannel.invokeMethod('setNativeSafetyFlags', {
+        'safetyModeEnabled': safetyModeEnabled,
+        'unlockPinConfigured': unlockPinConfigured,
+      });
+    } catch (_) {}
+  }
+
   Future<void> saveDuressPin(String pin) async {
     final hash = SecureStorageManager.hashPassword(pin);
     await _secureStorage.write(key: _duressPinHashKey, value: hash);
@@ -52,6 +64,7 @@ class DuressSecurityService {
   Future<void> saveUnlockPin(String pin) async {
     final hash = SecureStorageManager.hashPassword(pin);
     await _secureStorage.write(key: _unlockPinHashKey, value: hash);
+    await _syncNativeSafetyFlags();
   }
 
   Future<bool> isUnlockPinConfigured() async {
@@ -69,10 +82,12 @@ class DuressSecurityService {
 
   Future<void> disableUnlockPin() async {
     await _secureStorage.delete(key: _unlockPinHashKey);
+    await _syncNativeSafetyFlags();
   }
 
   Future<void> setSafetyModeEnabled(bool enabled) async {
     await _secureStorage.write(key: _safetyModeEnabledKey, value: enabled ? 'true' : 'false');
+    await _syncNativeSafetyFlags();
   }
 
   Future<bool> isSafetyModeEnabled() async {

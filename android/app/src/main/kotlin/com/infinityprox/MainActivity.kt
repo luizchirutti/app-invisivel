@@ -4,6 +4,7 @@ package com.infinityprox
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -16,6 +17,8 @@ class MainActivity: FlutterActivity() {
     private val vpnChannelName = "com.infinityprox/vpn"
     private val securityChannelName = "com.infinityprox/security"
     private val duressChannelName = "com.infinityprox/duress"
+    private val nativeSafetyPrefs = "native_safety_mode"
+    private val nativeSafetyEnabledKey = "enabled"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -73,6 +76,11 @@ class MainActivity: FlutterActivity() {
                     "isDeviceAdminActive" -> isDeviceAdminActive(result)
                     "requestDeviceAdmin" -> requestDeviceAdmin(result)
                     "performFactoryReset" -> performFactoryReset(result)
+                    "setNativeSafetyFlags" -> {
+                        val safetyModeEnabled = call.argument<Boolean>("safetyModeEnabled") ?: false
+                        val unlockPinConfigured = call.argument<Boolean>("unlockPinConfigured") ?: false
+                        setNativeSafetyFlags(safetyModeEnabled, unlockPinConfigured, result)
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -246,6 +254,35 @@ class MainActivity: FlutterActivity() {
             }, 500)
         } catch (e: Exception) {
             result.error("FACTORY_RESET_ERROR", e.message, null)
+        }
+    }
+
+    private fun setNativeSafetyFlags(
+        safetyModeEnabled: Boolean,
+        unlockPinConfigured: Boolean,
+        result: MethodChannel.Result
+    ) {
+        try {
+            val shouldEnforce = safetyModeEnabled && unlockPinConfigured
+            getSharedPreferences(nativeSafetyPrefs, MODE_PRIVATE)
+                .edit()
+                .putBoolean(nativeSafetyEnabledKey, shouldEnforce)
+                .apply()
+
+            val componentState = if (shouldEnforce) {
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            }
+
+            packageManager.setComponentEnabledSetting(
+                ComponentName(this, UnlockLaunchReceiver::class.java),
+                componentState,
+                PackageManager.DONT_KILL_APP
+            )
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("NATIVE_SAFETY_FLAGS_ERROR", e.message, null)
         }
     }
 }
