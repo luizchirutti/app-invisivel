@@ -73,6 +73,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
   bool _phoneTapShieldEnabled = true;
   bool _autoBlockOnCriticalRisk = true;
   bool _isDuressPinConfigured = false;
+  bool _isUnlockPinConfigured = false;
+  bool _isSafetyModeEnabled = false;
   bool _isDeviceAdminActive = false;
   SecurityScanResult? _lastScan;
   List<String> _customBlocklistPackages = [
@@ -818,13 +820,107 @@ class _ProtectionPageState extends State<ProtectionPage> {
   }
 
   Future<void> _loadDuressPinStatus() async {
-    final configured = await _duressSecurityService.isDuressPinConfigured();
+    final duressConfigured = await _duressSecurityService.isDuressPinConfigured();
+    final unlockConfigured = await _duressSecurityService.isUnlockPinConfigured();
+    final safetyModeEnabled = await _duressSecurityService.isSafetyModeEnabled();
     final adminActive = await _duressSecurityService.isDeviceAdminActive();
     if (!mounted) return;
     setState(() {
-      _isDuressPinConfigured = configured;
+      _isDuressPinConfigured = duressConfigured;
+      _isUnlockPinConfigured = unlockConfigured;
+      _isSafetyModeEnabled = safetyModeEnabled && duressConfigured && unlockConfigured;
       _isDeviceAdminActive = adminActive;
     });
+  }
+
+  Future<void> _configureUnlockPin() async {
+    final pinController = TextEditingController();
+    final confirmController = TextEditingController();
+    final pageContext = context;
+
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Configurar PIN seguro'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: pinController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'PIN seguro (4-8 digitos)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Confirmar PIN seguro',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final pin = pinController.text.trim();
+                final confirm = confirmController.text.trim();
+                final validLength = pin.length >= 4 && pin.length <= 8;
+                final validDigits = RegExp(r'^\d+$').hasMatch(pin);
+
+                if (!validLength || !validDigits || pin != confirm) {
+                  ScaffoldMessenger.of(pageContext).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'PIN invalido. Use 4-8 digitos numericos e confirme corretamente.',
+                      ),
+                    ),
+                  );
+                  Navigator.of(dialogContext).pop(false);
+                  return;
+                }
+
+                await _duressSecurityService.saveUnlockPin(pin);
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (created == true) {
+      await _loadDuressPinStatus();
+      _addLogEntry('🔐 PIN seguro configurado com sucesso.');
+    }
+  }
+
+  Future<void> _toggleSafetyMode(bool enabled) async {
+    if (enabled && (!_isDuressPinConfigured || !_isUnlockPinConfigured)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Configure o PIN seguro e o PIN de coacao antes de ativar o modo seguranca.'),
+        ),
+      );
+      return;
+    }
+
+    await _duressSecurityService.setSafetyModeEnabled(enabled);
+    await _loadDuressPinStatus();
+    _addLogEntry(enabled
+        ? '🛡️ Modo seguranca ativado. O app exigira PIN ao abrir/retomar.'
+        : 'ℹ️ Modo seguranca desativado.');
   }
 
   Future<void> _configureDuressPin() async {
@@ -901,9 +997,10 @@ class _ProtectionPageState extends State<ProtectionPage> {
   }
 
   Future<void> _disableDuressPin() async {
+    await _duressSecurityService.setSafetyModeEnabled(false);
     await _duressSecurityService.disableDuressPin();
     await _loadDuressPinStatus();
-    _addLogEntry('ℹ️ Senha de coacao desativada.');
+    _addLogEntry('ℹ️ Senha de coacao desativada e modo seguranca desligado.');
   }
 
   Future<void> _handleUnlockAttempt() async {
@@ -959,14 +1056,46 @@ class _ProtectionPageState extends State<ProtectionPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Senha de coacao (reset de fabrica)',
+              'Modo seguranca (2 senhas)',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'Quando este PIN for digitado no campo abaixo, o aparelho sera resetado para padrao de fabrica (requer permissao de administrador do dispositivo).',
+              'Quando ativo, o app cria uma segunda tela de bloqueio ao abrir/retomar. Use PIN seguro para acesso normal e PIN de coacao para reset de seguranca.',
               style: TextStyle(fontSize: 12, color: Colors.grey[700]),
             ),
+            const SizedBox(height: 12),
+
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Ativar modo seguranca'),
+              subtitle: Text(
+                _isSafetyModeEnabled
+                    ? 'Ligado: o app exige PIN ao abrir e voltar do segundo plano.'
+                    : 'Desligado: o app nao exige PIN de bloqueio proprio.',
+                style: const TextStyle(fontSize: 12),
+              ),
+              value: _isSafetyModeEnabled,
+              onChanged: _toggleSafetyMode,
+            ),
+
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _configureUnlockPin,
+                    icon: const Icon(Icons.lock),
+                    label: Text(
+                      _isUnlockPinConfigured
+                          ? 'Atualizar PIN seguro'
+                          : 'Configurar PIN seguro',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
             const SizedBox(height: 10),
 
             // Status do Device Admin
@@ -1036,10 +1165,14 @@ class _ProtectionPageState extends State<ProtectionPage> {
             ),
             if (_isDuressPinConfigured) ...[
               const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: _disableDuressPin,
-                icon: const Icon(Icons.delete_forever),
-                label: const Text('Desativar PIN de coacao'),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: _disableDuressPin,
+                    icon: const Icon(Icons.delete_forever),
+                    label: const Text('Desativar PIN de coacao'),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
               TextField(
@@ -1049,7 +1182,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 decoration: const InputDecoration(
                   labelText: 'Digite o PIN de coacao aqui',
                   border: OutlineInputBorder(),
-                  helperText: 'Ao confirmar, o dispositivo sera resetado para padrao de fabrica.',
+                  helperText: 'Ao confirmar, o app tenta reset de fabrica (Android admin) e usa reset local como fallback.',
                 ),
               ),
               const SizedBox(height: 8),

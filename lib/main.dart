@@ -13,6 +13,7 @@ import 'security/device_integrity/device_integrity_service.dart';
 import 'security/anti_fingerprinting/anti_fingerprinter_service.dart';
 import 'services/logging/secure_logging_service.dart';
 import 'services/platform/unified_vpn_service.dart';
+import 'presentation/widgets/security_mode_gate.dart';
 
 final getIt = GetIt.instance;
 
@@ -156,7 +157,9 @@ class AppInvisivel extends StatelessWidget {
       themeMode: ThemeMode.system,
       home: BlocProvider(
         create: (context) => getIt<ProtectionBloc>(),
-        child: const ProtectionPage(),
+        child: const SecurityModeGate(
+          child: ProtectionPage(),
+        ),
       ),
     );
   }

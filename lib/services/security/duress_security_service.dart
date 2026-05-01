@@ -12,6 +12,8 @@ import '../logging/secure_logging_service.dart';
 class DuressSecurityService {
   static const String _duressPinHashKey = 'duress_pin_hash';
   static const String _duressEnabledKey = 'duress_pin_enabled';
+  static const String _unlockPinHashKey = 'safety_unlock_pin_hash';
+  static const String _safetyModeEnabledKey = 'safety_mode_enabled';
   static const MethodChannel _duressChannel = MethodChannel('com.infinityprox/duress');
 
   static final DuressSecurityService _instance = DuressSecurityService._internal();
@@ -45,6 +47,37 @@ class DuressSecurityService {
   Future<void> disableDuressPin() async {
     await _secureStorage.delete(key: _duressPinHashKey);
     await _secureStorage.delete(key: _duressEnabledKey);
+  }
+
+  Future<void> saveUnlockPin(String pin) async {
+    final hash = SecureStorageManager.hashPassword(pin);
+    await _secureStorage.write(key: _unlockPinHashKey, value: hash);
+  }
+
+  Future<bool> isUnlockPinConfigured() async {
+    final hash = await _secureStorage.read(key: _unlockPinHashKey);
+    return hash != null && hash.isNotEmpty;
+  }
+
+  Future<bool> verifyUnlockPin(String pin) async {
+    final hash = await _secureStorage.read(key: _unlockPinHashKey);
+    if (hash == null || hash.isEmpty) {
+      return false;
+    }
+    return SecureStorageManager.verifyPassword(pin, hash);
+  }
+
+  Future<void> disableUnlockPin() async {
+    await _secureStorage.delete(key: _unlockPinHashKey);
+  }
+
+  Future<void> setSafetyModeEnabled(bool enabled) async {
+    await _secureStorage.write(key: _safetyModeEnabledKey, value: enabled ? 'true' : 'false');
+  }
+
+  Future<bool> isSafetyModeEnabled() async {
+    final value = await _secureStorage.read(key: _safetyModeEnabledKey);
+    return value == 'true';
   }
 
   Future<void> executeLocalSecurityReset() async {
