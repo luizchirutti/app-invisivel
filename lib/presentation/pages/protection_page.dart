@@ -834,75 +834,27 @@ class _ProtectionPageState extends State<ProtectionPage> {
   }
 
   Future<void> _configureUnlockPin() async {
-    final pinController = TextEditingController();
-    final confirmController = TextEditingController();
-    final pageContext = context;
-
-    final created = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Configurar PIN seguro'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: pinController,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'PIN seguro (4-8 digitos)',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: confirmController,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Confirmar PIN seguro',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final pin = pinController.text.trim();
-                final confirm = confirmController.text.trim();
-                final validLength = pin.length >= 4 && pin.length <= 8;
-                final validDigits = RegExp(r'^\d+$').hasMatch(pin);
-
-                if (!validLength || !validDigits || pin != confirm) {
-                  ScaffoldMessenger.of(pageContext).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'PIN invalido. Use 4-8 digitos numericos e confirme corretamente.',
-                      ),
-                    ),
-                  );
-                  Navigator.of(dialogContext).pop(false);
-                  return;
-                }
-
-                await _duressSecurityService.saveUnlockPin(pin);
-                if (!dialogContext.mounted) return;
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: const Text('Salvar'),
-            ),
-          ],
-        );
-      },
+    final pin = await _showPinDialog(
+      title: 'Configurar PIN seguro',
+      pinLabel: 'PIN seguro (4-8 digitos)',
+      confirmLabel: 'Confirmar PIN seguro',
     );
 
-    if (created == true) {
+    if (pin == null) return;
+
+    try {
+      await _duressSecurityService.saveUnlockPin(pin);
       await _loadDuressPinStatus();
       _addLogEntry('🔐 PIN seguro configurado com sucesso.');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PIN seguro salvo com sucesso.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Falha ao salvar PIN seguro. Tente novamente.')),
+      );
     }
   }
 
@@ -924,76 +876,125 @@ class _ProtectionPageState extends State<ProtectionPage> {
   }
 
   Future<void> _configureDuressPin() async {
+    final pin = await _showPinDialog(
+      title: 'Configurar senha de coacao',
+      pinLabel: 'PIN de coacao (4-8 digitos)',
+      confirmLabel: 'Confirmar PIN de coacao',
+    );
+
+    if (pin == null) return;
+
+    try {
+      await _duressSecurityService.saveDuressPin(pin);
+      await _loadDuressPinStatus();
+      _addLogEntry('🛡️ Senha de coacao configurada com sucesso.');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PIN de coacao salvo com sucesso.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Falha ao salvar PIN de coacao. Tente novamente.')),
+      );
+    }
+  }
+
+  Future<String?> _showPinDialog({
+    required String title,
+    required String pinLabel,
+    required String confirmLabel,
+  }) async {
     final pinController = TextEditingController();
     final confirmController = TextEditingController();
-    final pageContext = context; // salva contexto da página antes do dialog
+    String? validationError;
 
-    final created = await showDialog<bool>(
+    final result = await showDialog<String>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Configurar senha de coacao'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: pinController,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'PIN de coacao (4-8 digitos)',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: confirmController,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Confirmar PIN',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final pin = pinController.text.trim();
-                final confirm = confirmController.text.trim();
-                final validLength = pin.length >= 4 && pin.length <= 8;
-                final validDigits = RegExp(r'^\d+$').hasMatch(pin);
-
-                if (!validLength || !validDigits || pin != confirm) {
-                  ScaffoldMessenger.of(pageContext).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'PIN invalido. Use 4-8 digitos numericos e confirme corretamente.',
-                      ),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(title),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: pinController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    maxLength: 8,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: pinLabel,
+                      counterText: '',
                     ),
-                  );
-                  Navigator.of(dialogContext).pop(false);
-                  return;
-                }
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: confirmController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    maxLength: 8,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: confirmLabel,
+                      counterText: '',
+                      errorText: validationError,
+                    ),
+                    onSubmitted: (_) {
+                      final pin = pinController.text.trim();
+                      final confirm = confirmController.text.trim();
+                      final validLength = pin.length >= 4 && pin.length <= 8;
+                      final validDigits = RegExp(r'^\d+$').hasMatch(pin);
 
-                await _duressSecurityService.saveDuressPin(pin);
-                if (!dialogContext.mounted) return;
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: const Text('Salvar'),
-            ),
-          ],
+                      if (!validLength || !validDigits || pin != confirm) {
+                        setDialogState(() {
+                          validationError =
+                              'PIN invalido. Use 4-8 digitos e confirme corretamente.';
+                        });
+                        return;
+                      }
+
+                      Navigator.of(dialogContext).pop(pin);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final pin = pinController.text.trim();
+                    final confirm = confirmController.text.trim();
+                    final validLength = pin.length >= 4 && pin.length <= 8;
+                    final validDigits = RegExp(r'^\d+$').hasMatch(pin);
+
+                    if (!validLength || !validDigits || pin != confirm) {
+                      setDialogState(() {
+                        validationError =
+                            'PIN invalido. Use 4-8 digitos e confirme corretamente.';
+                      });
+                      return;
+                    }
+
+                    Navigator.of(dialogContext).pop(pin);
+                  },
+                  child: const Text('Salvar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
 
-    if (created == true) {
-      await _loadDuressPinStatus();
-      _addLogEntry('🛡️ Senha de coacao configurada com sucesso.');
-    }
+    pinController.dispose();
+    confirmController.dispose();
+    return result;
   }
 
   Future<void> _disableDuressPin() async {
