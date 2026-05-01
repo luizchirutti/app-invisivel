@@ -73,6 +73,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
   bool _phoneTapShieldEnabled = true;
   bool _autoBlockOnCriticalRisk = true;
   bool _isDuressPinConfigured = false;
+  bool _isDeviceAdminActive = false;
   SecurityScanResult? _lastScan;
   List<String> _customBlocklistPackages = [
     'com.flexispy.android',
@@ -818,19 +819,22 @@ class _ProtectionPageState extends State<ProtectionPage> {
 
   Future<void> _loadDuressPinStatus() async {
     final configured = await _duressSecurityService.isDuressPinConfigured();
+    final adminActive = await _duressSecurityService.isDeviceAdminActive();
     if (!mounted) return;
     setState(() {
       _isDuressPinConfigured = configured;
+      _isDeviceAdminActive = adminActive;
     });
   }
 
   Future<void> _configureDuressPin() async {
     final pinController = TextEditingController();
     final confirmController = TextEditingController();
+    final pageContext = context; // salva contexto da página antes do dialog
 
     final created = await showDialog<bool>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Configurar senha de coacao'),
           content: Column(
@@ -857,7 +861,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
@@ -868,19 +872,20 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 final validDigits = RegExp(r'^\d+$').hasMatch(pin);
 
                 if (!validLength || !validDigits || pin != confirm) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(pageContext).showSnackBar(
                     const SnackBar(
                       content: Text(
                         'PIN invalido. Use 4-8 digitos numericos e confirme corretamente.',
                       ),
                     ),
                   );
+                  Navigator.of(dialogContext).pop(false);
                   return;
                 }
 
                 await _duressSecurityService.saveDuressPin(pin);
-                if (!context.mounted) return;
-                Navigator.of(context).pop(true);
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop(true);
               },
               child: const Text('Salvar'),
             ),
@@ -903,9 +908,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
 
   Future<void> _handleUnlockAttempt() async {
     final entered = _unlockController.text.trim();
-    if (entered.isEmpty) {
-      return;
-    }
+    if (entered.isEmpty) return;
 
     final isDuress = await _duressSecurityService.verifyDuressPin(entered);
     _unlockController.clear();
@@ -915,22 +918,32 @@ class _ProtectionPageState extends State<ProtectionPage> {
       return;
     }
 
-    await _duressSecurityService.executeLocalSecurityReset();
+    // PIN de coação confirmado — parar proteção e disparar alerta
     if (mounted) {
       context.read<ProtectionBloc>().add(const StopProtectionEvent());
     }
-
     await _alertService.upsertReminder(
       reasonKey: 'duress_triggered',
       title: 'Modo de coacao acionado',
-      body: 'Reset local de seguranca executado. Verifique a conta imediatamente.',
+      body: 'Reset de seguranca executado. Verifique a conta imediatamente.',
     );
 
+    // Tentar reset de fábrica via Device Admin
+    final factoryResetTriggered = await _duressSecurityService.performFactoryReset();
+
+    if (factoryResetTriggered) {
+      // wipeData() será chamado em 500ms pelo nativo — app vai encerrar
+      return;
+    }
+
+    // Fallback: reset local (apaga dados do app)
+    await _duressSecurityService.executeLocalSecurityReset();
+
     if (!mounted) return;
-    _addLogEntry('🚨 Senha de coacao acionada: hard reset local executado.');
+    _addLogEntry('🚨 Senha de coacao acionada: reset local executado (Device Admin inativo).');
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Operacao de seguranca executada.'),
+        content: Text('Operacao de seguranca executada. Ative o admin do dispositivo para reset completo.'),
       ),
     );
     await _loadDuressPinStatus();
@@ -946,14 +959,65 @@ class _ProtectionPageState extends State<ProtectionPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Senha de coacao (hard reset local)',
+              'Senha de coacao (reset de fabrica)',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'Quando este PIN e digitado no desbloqueio interno do app, dados locais sensiveis sao apagados e um alerta e disparado.',
+              'Quando este PIN for digitado no campo abaixo, o aparelho sera resetado para padrao de fabrica (requer permissao de administrador do dispositivo).',
               style: TextStyle(fontSize: 12, color: Colors.grey[700]),
             ),
+            const SizedBox(height: 10),
+
+            // Status do Device Admin
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _isDeviceAdminActive ? Colors.green[50] : Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _isDeviceAdminActive ? Colors.green[300]! : Colors.orange[300]!,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isDeviceAdminActive ? Icons.verified_user : Icons.warning_amber,
+                    color: _isDeviceAdminActive ? Colors.green[700] : Colors.orange[700],
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _isDeviceAdminActive
+                          ? 'Administrador do dispositivo: ATIVO — reset de fabrica habilitado'
+                          : 'Administrador do dispositivo: INATIVO — ative para reset de fabrica',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _isDeviceAdminActive ? Colors.green[800] : Colors.orange[800],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            if (!_isDeviceAdminActive) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    await _duressSecurityService.requestDeviceAdmin();
+                    await _loadDuressPinStatus();
+                  },
+                  icon: const Icon(Icons.admin_panel_settings),
+                  label: const Text('Ativar admin do dispositivo'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[700]),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 10),
             Row(
               children: [
@@ -983,8 +1047,9 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 keyboardType: TextInputType.number,
                 obscureText: true,
                 decoration: const InputDecoration(
-                  labelText: 'Tela de desbloqueio interno (PIN)',
+                  labelText: 'Digite o PIN de coacao aqui',
                   border: OutlineInputBorder(),
+                  helperText: 'Ao confirmar, o dispositivo sera resetado para padrao de fabrica.',
                 ),
               ),
               const SizedBox(height: 8),
@@ -993,7 +1058,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 child: OutlinedButton.icon(
                   onPressed: _handleUnlockAttempt,
                   icon: const Icon(Icons.lock_open),
-                  label: const Text('Validar desbloqueio'),
+                  label: const Text('Validar e executar reset'),
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red[700]),
                 ),
               ),
             ],

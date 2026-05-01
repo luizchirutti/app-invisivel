@@ -1,6 +1,9 @@
 // Arquivo: android/app/src/main/kotlin/com/infinityprox/MainActivity.kt
 package com.infinityprox
 
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -12,6 +15,7 @@ import com.infinityprox.vpn.VPNServiceManager
 class MainActivity: FlutterActivity() {
     private val vpnChannelName = "com.infinityprox/vpn"
     private val securityChannelName = "com.infinityprox/security"
+    private val duressChannelName = "com.infinityprox/duress"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -58,6 +62,17 @@ class MainActivity: FlutterActivity() {
                         val config = call.arguments as? Map<String, Any>
                         runAdvancedSecurityScan(config, result)
                     }
+                    else -> result.notImplemented()
+                }
+            }
+
+        // Canal Duress (reset de fábrica via Device Admin)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, duressChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isDeviceAdminActive" -> isDeviceAdminActive(result)
+                    "requestDeviceAdmin" -> requestDeviceAdmin(result)
+                    "performFactoryReset" -> performFactoryReset(result)
                     else -> result.notImplemented()
                 }
             }
@@ -180,6 +195,57 @@ class MainActivity: FlutterActivity() {
             result.success(scan)
         } catch (e: Exception) {
             result.error("ADV_SECURITY_SCAN_ERROR", e.message, null)
+        }
+    }
+
+    // ==================== Duress / Device Admin Methods ====================
+
+    private fun getDevicePolicyManager(): DevicePolicyManager =
+        getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
+
+    private fun getAdminComponent(): ComponentName =
+        ComponentName(this, AppDeviceAdminReceiver::class.java)
+
+    private fun isDeviceAdminActive(result: MethodChannel.Result) {
+        try {
+            val dpm = getDevicePolicyManager()
+            val active = dpm.isAdminActive(getAdminComponent())
+            result.success(active)
+        } catch (e: Exception) {
+            result.error("DEVICE_ADMIN_ERROR", e.message, null)
+        }
+    }
+
+    private fun requestDeviceAdmin(result: MethodChannel.Result) {
+        try {
+            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, getAdminComponent())
+                putExtra(
+                    DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                    "Necessário para executar reset de segurança em caso de coação."
+                )
+            }
+            startActivityForResult(intent, 0)
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("DEVICE_ADMIN_REQUEST_ERROR", e.message, null)
+        }
+    }
+
+    private fun performFactoryReset(result: MethodChannel.Result) {
+        try {
+            val dpm = getDevicePolicyManager()
+            if (!dpm.isAdminActive(getAdminComponent())) {
+                result.error("NOT_DEVICE_ADMIN", "App não é administrador do dispositivo", null)
+                return
+            }
+            result.success(true)
+            // Pequeno delay para garantir que o resultado chegue ao Flutter antes do wipe
+            android.os.Handler(mainLooper).postDelayed({
+                dpm.wipeData(0)
+            }, 500)
+        } catch (e: Exception) {
+            result.error("FACTORY_RESET_ERROR", e.message, null)
         }
     }
 }

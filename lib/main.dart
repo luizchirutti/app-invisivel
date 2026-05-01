@@ -13,7 +13,6 @@ import 'security/device_integrity/device_integrity_service.dart';
 import 'security/anti_fingerprinting/anti_fingerprinter_service.dart';
 import 'services/logging/secure_logging_service.dart';
 import 'services/platform/unified_vpn_service.dart';
-import 'services/notifications/security_alert_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -52,10 +51,6 @@ Future<void> _setupSecurityServices() async {
   await logger.initialize();
   await logger.info('Aplicação iniciada', 'Main');
 
-  // Alertas de segurança
-  final alertService = SecurityAlertService();
-  await alertService.initialize();
-
   // Device Integrity
   final integrityService = DeviceIntegrityService();
   final integrityResult = await integrityService.checkDeviceIntegrity();
@@ -74,13 +69,6 @@ Future<void> _setupSecurityServices() async {
       await logger.critical(
         'Ameaça detectada: ${result.threatsSummary}',
         'ThreatDetection',
-      );
-      await alertService.upsertReminder(
-        reasonKey: 'suspicious_activity',
-        title: 'Atividade suspeita detectada',
-        body: result.threatsSummary.isNotEmpty
-            ? result.threatsSummary
-            : 'Sinais de risco detectados no dispositivo.',
       );
     },
   );
@@ -106,9 +94,6 @@ void _setupDependencies() {
   }
   if (!getIt.isRegistered<SecureLoggingService>()) {
     getIt.registerSingleton<SecureLoggingService>(SecureLoggingService());
-  }
-  if (!getIt.isRegistered<SecurityAlertService>()) {
-    getIt.registerSingleton<SecurityAlertService>(SecurityAlertService());
   }
 
   // Repositórios

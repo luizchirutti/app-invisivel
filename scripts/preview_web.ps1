@@ -177,12 +177,6 @@ while ($listener.IsListening) {
     } catch [System.Net.HttpListenerException] {
         break
     } catch {
-        $requestPath = $null
-        if ($req -and $req.Url) {
-            $requestPath = $req.Url.AbsoluteUri
-        }
-        Write-Host "[HTTP 500] Request: $requestPath" -ForegroundColor Red
-        Write-Host "[HTTP 500] Error: $($_.Exception.Message)" -ForegroundColor Red
         try { $ctx.Response.StatusCode = 500; $ctx.Response.OutputStream.Close() } catch {}
     }
 }

@@ -397,8 +397,8 @@
     <h2>Onde estamos hoje</h2>
     <div class="metrics-grid">
       <div class="metric-card">
-        <div class="value">6</div>
-        <div class="label">Camadas de proteção implementadas</div>
+        <div class="value">10+</div>
+        <div class="label">Funcionalidades de proteção implementadas</div>
       </div>
       <div class="metric-card">
         <div class="value">AES-256</div>
@@ -409,6 +409,20 @@
         <div class="label">Plataformas nativas (Android + iOS)</div>
       </div>
     </div>
+    <div class="metrics-grid" style="margin-top: 16px;">
+      <div class="metric-card">
+        <div class="value">5</div>
+        <div class="label">Dimensões de varredura em tempo real</div>
+      </div>
+      <div class="metric-card">
+        <div class="value">1-click</div>
+        <div class="label">Ativação + varredura instantânea</div>
+      </div>
+      <div class="metric-card">
+        <div class="value">100%</div>
+        <div class="label">Bloqueio automático em risco crítico</div>
+      </div>
+    </div>
   </div>
 
   <hr class="divider" />
@@ -416,8 +430,8 @@
   <!-- FUNCIONALIDADES DE PROTEÇÃO -->
   <div class="section">
     <div class="section-title">03 — Funcionalidades de Proteção</div>
-    <h2>6 Camadas de Segurança</h2>
-    <p>Cada camada atua de forma independente e complementar, garantindo proteção mesmo que uma delas seja comprometida.</p>
+    <h2>Proteção Multicamada Avançada</h2>
+    <p>Cada camada atua de forma independente e complementar, garantindo proteção mesmo que uma delas seja comprometida. Novas funcionalidades de varredura ativa e bloqueio automático elevam o nível de segurança a padrão enterprise.</p>
 
     <div class="feature-grid">
 
@@ -460,6 +474,41 @@
         <div class="icon">⚠️</div>
         <h3>Detecção de Proxies Suspeitos</h3>
         <p>Identifica ataques Man-in-the-Middle (MITM) na rede, como interceptações em Wi-Fi público. Alerta o usuário em tempo real e bloqueia conexões não confiáveis.</p>
+        <span class="badge-status badge-done">✅ Desenvolvido</span>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon">🔬</div>
+        <h3>Varredura de Segurança em 5 Dimensões</h3>
+        <p>Análise ativa do dispositivo cobrindo: integridade do sistema (root/jailbreak), apps suspeitos instalados, certificados SSL da rede, proxies maliciosos e configurações de segurança do SO. Resultado visual com pontuação de confiança.</p>
+        <span class="badge-status badge-done">✅ Desenvolvido</span>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon">📋</div>
+        <h3>Lista Branca &amp; Lista Negra de Aplicativos</h3>
+        <p>O usuário define quais apps são sempre confiáveis (lista branca) e quais são sempre bloqueados (lista negra). A varredura usa essas listas para personalizar o nível de alerta — proteção adaptada ao perfil de cada usuário.</p>
+        <span class="badge-status badge-done">✅ Desenvolvido</span>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon">🏆</div>
+        <h3>Certificado Visual de Sessão Segura</h3>
+        <p>Após varredura aprovada, o app emite um certificado visual com timestamp, pontuação de confiança e lista de checks aprovados. Comprovação imediata e auditável de que o dispositivo está seguro.</p>
+        <span class="badge-status badge-done">✅ Desenvolvido</span>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon">🚨</div>
+        <h3>Bloqueio Automático por Risco Crítico</h3>
+        <p>Se a varredura detecta ameaça crítica (root ativo, app espião presente, MITM na rede), o app aciona o Kill Switch automaticamente e desativa todas as conexões — sem intervenção do usuário. Zero tolerância a riscos críticos.</p>
+        <span class="badge-status badge-done">✅ Desenvolvido</span>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon">🍎</div>
+        <h3>iOS Nativo com Network Extension</h3>
+        <p>Scaffold iOS completo com PacketTunnelProvider, KillSwitchManager e SecurityChecker em Swift. Integração via NEVPNManager e Network Extension framework — mesma proteção do Android, nativa no iPhone.</p>
         <span class="badge-status badge-done">✅ Desenvolvido</span>
       </div>
 
@@ -573,6 +622,12 @@
       <span class="tech-pill">PBKDF2-SHA256</span>
       <span class="tech-pill">SSL Pinning</span>
       <span class="tech-pill">iptables / NEPolicy</span>
+      <span class="tech-pill">SecurityChecker (Kotlin + Swift)</span>
+      <span class="tech-pill">Network Extension (iOS)</span>
+      <span class="tech-pill">Varredura Ativa em 5D</span>
+      <span class="tech-pill">Lista Branca / Lista Negra</span>
+      <span class="tech-pill">Certificado de Sessão</span>
+      <span class="tech-pill">GitHub Actions CI/CD</span>
     </div>
   </div>
 
@@ -631,7 +686,52 @@
 
   <!-- DIFERENCIAIS -->
   <div class="section">
-    <div class="section-title">08 — Diferenciais Competitivos</div>
+    <div class="section-title">08 — Varredura Avançada</div>
+    <h2>Inteligência de Segurança Ativa</h2>
+    <p>Diferente de apps de VPN tradicionais que apenas criptografam o tráfego, o App Invisível realiza varredura ativa e contínua do ambiente do dispositivo — antes, durante e após a proteção estar ativa.</p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Dimensão</th>
+          <th>O que verifica</th>
+          <th>Ação automática</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>🔐 Integridade do Sistema</td>
+          <td>Root (Android) / Jailbreak (iOS) — SO comprometido expõe todas as chaves</td>
+          <td>Alerta crítico + bloqueio automático</td>
+        </tr>
+        <tr>
+          <td>📱 Apps Suspeitos</td>
+          <td>Detecta spywares, stalkerware e ferramentas de monitoramento instaladas</td>
+          <td>Lista as ameaças + bloqueia se confirmado</td>
+        </tr>
+        <tr>
+          <td>🌐 Certificados SSL</td>
+          <td>Valida certificados da rede — detecta ataques MITM e SSL stripping</td>
+          <td>Rejeita conexão + ativa Kill Switch</td>
+        </tr>
+        <tr>
+          <td>⚡ Proxies Maliciosos</td>
+          <td>Identifica redirecionamento de tráfego por proxies não autorizados</td>
+          <td>Alerta + sugere desconexão da rede</td>
+        </tr>
+        <tr>
+          <td>🛡️ Configurações do SO</td>
+          <td>Permissões suspeitas, modo desenvolvedor ativo, depuração USB habilitada</td>
+          <td>Avisa e reduz pontuação de confiança</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="section">
+    <div class="section-title">09 — Diferenciais Competitivos</div>
     <h2>Por que o App Invisível?</h2>
 
     <div class="feature-grid">
@@ -664,7 +764,7 @@
     <p>
       Este documento contém informações confidenciais e proprietárias.<br />
       Distribuição ou reprodução não autorizada é proibida.<br />
-      <strong>MVP · Abril de 2026</strong>
+      <strong>MVP v2 · Abril de 2026</strong>
     </p>
     <p style="margin-top: 16px; font-size: 11px;">
       Para dúvidas técnicas ou demonstração, entre em contato com a equipe de desenvolvimento.

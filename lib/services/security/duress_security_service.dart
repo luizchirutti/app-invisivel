@@ -1,16 +1,18 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../security/encryption/crypto_manager.dart';
 import '../logging/secure_logging_service.dart';
 
-/// Serviço de senha de coação para reset local seguro dentro do app.
+/// Serviço de senha de coação com suporte a reset de fábrica via Device Admin.
 class DuressSecurityService {
   static const String _duressPinHashKey = 'duress_pin_hash';
   static const String _duressEnabledKey = 'duress_pin_enabled';
+  static const MethodChannel _duressChannel = MethodChannel('com.infinityprox/duress');
 
   static final DuressSecurityService _instance = DuressSecurityService._internal();
 
@@ -64,6 +66,38 @@ class DuressSecurityService {
     for (final dir in dirs) {
       await _deleteDirectoryChildren(dir);
     }
+  }
+
+  /// Tenta executar reset de fábrica via Device Admin (Android).
+  /// Retorna true se acionado, false se Device Admin não está ativo.
+  Future<bool> performFactoryReset() async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+    try {
+      final result = await _duressChannel.invokeMethod<bool>('performFactoryReset');
+      return result == true;
+    } on PlatformException catch (e) {
+      if (e.code == 'NOT_DEVICE_ADMIN') {
+        return false;
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool> isDeviceAdminActive() async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+    try {
+      final result = await _duressChannel.invokeMethod<bool>('isDeviceAdminActive');
+      return result == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> requestDeviceAdmin() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _duressChannel.invokeMethod('requestDeviceAdmin');
+    } catch (_) {}
   }
 
   Future<List<Directory>> _candidateDirectories() async {
