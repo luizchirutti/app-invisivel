@@ -23,6 +23,7 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
   bool _locked = false;
   bool _safetyModeActive = false;
   bool _submitting = false;
+  bool _wasBackgrounded = false;
   String? _error;
 
   @override
@@ -41,19 +42,31 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
-      if (_safetyModeActive && mounted) {
-        setState(() {
-          _locked = true;
-          _error = null;
-          _pinController.clear();
-        });
-      }
-      return;
-    }
-
-    if (state == AppLifecycleState.resumed) {
-      _refreshGateState(forceLock: true);
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _wasBackgrounded = true;
+        if (_safetyModeActive && mounted) {
+          setState(() {
+            _locked = true;
+            _error = null;
+            _pinController.clear();
+          });
+        }
+        break;
+      case AppLifecycleState.resumed:
+        if (_wasBackgrounded && _safetyModeActive && mounted) {
+          setState(() {
+            _locked = true;
+            _error = null;
+            _pinController.clear();
+          });
+        }
+        _wasBackgrounded = false;
+        _refreshGateState(forceLock: true);
+        break;
     }
   }
 
