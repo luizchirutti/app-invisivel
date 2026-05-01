@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as enc;
@@ -23,8 +24,8 @@ class CryptoManager {
 
   /// Gera um IV aleatório (96 bits para GCM)
   static Uint8List generateGCMIV() {
-    final random = SecureRandom('Fortuna');
-    return random.nextBytes(12); // 96 bits = 12 bytes
+    final random = Random.secure();
+    return Uint8List.fromList(List<int>.generate(12, (_) => random.nextInt(256)));
   }
 
   /// Encripta dados usando AES-256-GCM
