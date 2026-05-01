@@ -15,6 +15,16 @@ jobs:
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Validar contexto do build
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+          git rev-parse HEAD
+          grep -n "coreLibraryDesugaringEnabled" android/app/build.gradle || true
 
       - name: Configurar Java 17
         uses: actions/setup-java@v4
