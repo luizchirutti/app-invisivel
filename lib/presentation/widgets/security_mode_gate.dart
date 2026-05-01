@@ -26,6 +26,15 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
   bool _wasBackgrounded = false;
   String? _error;
 
+  void _lockNow() {
+    if (!mounted) return;
+    setState(() {
+      _locked = true;
+      _error = null;
+      _pinController.clear();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -48,29 +57,19 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
         _wasBackgrounded = true;
-        if (_safetyModeActive && mounted) {
-          setState(() {
-            _locked = true;
-            _error = null;
-            _pinController.clear();
-          });
-        }
+        _enforceGateFromStorage(lockIfEnabled: true);
         break;
       case AppLifecycleState.resumed:
-        if (_wasBackgrounded && _safetyModeActive && mounted) {
-          setState(() {
-            _locked = true;
-            _error = null;
-            _pinController.clear();
-          });
+        if (_wasBackgrounded) {
+          _lockNow();
         }
         _wasBackgrounded = false;
-        _refreshGateState(forceLock: true);
+        _enforceGateFromStorage(lockIfEnabled: true);
         break;
     }
   }
 
-  Future<void> _refreshGateState({required bool forceLock}) async {
+  Future<void> _enforceGateFromStorage({required bool lockIfEnabled}) async {
     final modeEnabled = await _duressService.isSafetyModeEnabled();
     final unlockConfigured = await _duressService.isUnlockPinConfigured();
     final gateMustBeActive = modeEnabled && unlockConfigured;
@@ -81,10 +80,19 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
       _loading = false;
       if (!gateMustBeActive) {
         _locked = false;
-      } else if (forceLock) {
+      } else if (lockIfEnabled) {
         _locked = true;
+        _error = null;
       }
     });
+
+    if (gateMustBeActive && lockIfEnabled) {
+      _pinController.clear();
+    }
+  }
+
+  Future<void> _refreshGateState({required bool forceLock}) async {
+    await _enforceGateFromStorage(lockIfEnabled: forceLock);
   }
 
   Future<void> _submitPin() async {
