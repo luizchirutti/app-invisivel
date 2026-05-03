@@ -148,6 +148,23 @@ class DuressSecurityService {
     } catch (_) {}
   }
 
+  Future<bool> isFullScreenIntentPermissionGranted() async {
+    if (kIsWeb || !Platform.isAndroid) return true;
+    try {
+      final result = await _duressChannel.invokeMethod<bool>('isFullScreenIntentPermissionGranted');
+      return result == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> openFullScreenIntentSettings() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _duressChannel.invokeMethod('openFullScreenIntentSettings');
+    } catch (_) {}
+  }
+
   Future<List<Directory>> _candidateDirectories() async {
     final dirs = <Directory>[];
     try {

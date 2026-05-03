@@ -28,7 +28,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.shield_off), findsOneWidget);
+      expect(find.byIcon(Icons.shield), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
 
       await tester.tap(find.byType(FloatingActionButton));

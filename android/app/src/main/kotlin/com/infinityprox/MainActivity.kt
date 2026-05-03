@@ -1,10 +1,15 @@
 // Arquivo: android/app/src/main/kotlin/com/infinityprox/MainActivity.kt
 package com.infinityprox
 
+import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -19,6 +24,22 @@ class MainActivity: FlutterActivity() {
     private val duressChannelName = "com.infinityprox/duress"
     private val nativeSafetyPrefs = "native_safety_mode"
     private val nativeSafetyEnabledKey = "enabled"
+
+    override fun onStart() {
+        super.onStart()
+        // Melhor esforço para permitir exibição imediata da tela protegida
+        // em dispositivos com lockscreen.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+            )
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -81,6 +102,8 @@ class MainActivity: FlutterActivity() {
                         val unlockPinConfigured = call.argument<Boolean>("unlockPinConfigured") ?: false
                         setNativeSafetyFlags(safetyModeEnabled, unlockPinConfigured, result)
                     }
+                    "isFullScreenIntentPermissionGranted" -> isFullScreenIntentPermissionGranted(result)
+                    "openFullScreenIntentSettings" -> openFullScreenIntentSettings(result)
                     else -> result.notImplemented()
                 }
             }
@@ -283,6 +306,41 @@ class MainActivity: FlutterActivity() {
             result.success(true)
         } catch (e: Exception) {
             result.error("NATIVE_SAFETY_FLAGS_ERROR", e.message, null)
+        }
+    }
+
+    private fun isFullScreenIntentPermissionGranted(result: MethodChannel.Result) {
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                result.success(true)
+                return
+            }
+
+            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            result.success(nm.canUseFullScreenIntent())
+        } catch (e: Exception) {
+            result.error("FULL_SCREEN_PERMISSION_CHECK_ERROR", e.message, null)
+        }
+    }
+
+    private fun openFullScreenIntentSettings(result: MethodChannel.Result) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                    data = Uri.parse("package:$packageName")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+            } else {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+            }
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("FULL_SCREEN_PERMISSION_SETTINGS_ERROR", e.message, null)
         }
     }
 }

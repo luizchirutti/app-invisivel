@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,14 +19,14 @@ void main() {
   });
 
   tearDown(() async {
-    await messenger.setMockMethodCallHandler(vpnChannel, null);
-    await messenger.setMockMethodCallHandler(securityChannel, null);
+    messenger.setMockMethodCallHandler(vpnChannel, null);
+    messenger.setMockMethodCallHandler(securityChannel, null);
   });
 
   test('startVPN envia payload e retorna true com status esperado', () async {
     Map<dynamic, dynamic>? received;
 
-    await messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
+    messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
       expect(call.method, 'startVPN');
       received = call.arguments as Map<dynamic, dynamic>;
       return <String, dynamic>{'status': 'VPN_STARTING'};
@@ -53,7 +51,7 @@ void main() {
   });
 
   test('stopVPN retorna true quando status VPN_STOPPING', () async {
-    await messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
+    messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
       expect(call.method, 'stopVPN');
       return <String, dynamic>{'status': 'VPN_STOPPING'};
     });
@@ -63,7 +61,7 @@ void main() {
   });
 
   test('getVPNStatus retorna fallback quando resposta nula', () async {
-    await messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
+    messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
       expect(call.method, 'getVPNStatus');
       return null;
     });
@@ -75,7 +73,7 @@ void main() {
   });
 
   test('setKillSwitch envia enabled e retorna true', () async {
-    await messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
+    messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
       expect(call.method, 'setKillSwitch');
       final args = call.arguments as Map<dynamic, dynamic>;
       expect(args['enabled'], isTrue);
@@ -87,7 +85,7 @@ void main() {
   });
 
   test('security methods retornam valores esperados', () async {
-    await messenger.setMockMethodCallHandler(
+    messenger.setMockMethodCallHandler(
       securityChannel,
       (MethodCall call) async {
         switch (call.method) {

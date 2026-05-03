@@ -19,12 +19,12 @@ void main() {
   });
 
   tearDown(() async {
-    await messenger.setMockMethodCallHandler(vpnChannel, null);
-    await messenger.setMockMethodCallHandler(securityChannel, null);
+    messenger.setMockMethodCallHandler(vpnChannel, null);
+    messenger.setMockMethodCallHandler(securityChannel, null);
   });
 
   test('startVPN retorna false para status inesperado', () async {
-    await messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
+    messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
       expect(call.method, 'startVPN');
       return <String, dynamic>{'status': 'FAILED'};
     });
@@ -44,7 +44,7 @@ void main() {
   });
 
   test('getVPNStatus retorna valor do canal', () async {
-    await messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
+    messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
       expect(call.method, 'getVPNStatus');
       return <String, dynamic>{
         'isConnected': true,
@@ -59,7 +59,7 @@ void main() {
   });
 
   test('stopVPN e setKillSwitch retornam true no caso de sucesso', () async {
-    await messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
+    messenger.setMockMethodCallHandler(vpnChannel, (MethodCall call) async {
       if (call.method == 'stopVPN') {
         return <String, dynamic>{'status': 'VPN_STOPPING'};
       }
@@ -76,7 +76,7 @@ void main() {
   });
 
   test('security methods iOS mapeiam retorno do canal', () async {
-    await messenger.setMockMethodCallHandler(
+    messenger.setMockMethodCallHandler(
       securityChannel,
       (MethodCall call) async {
         switch (call.method) {

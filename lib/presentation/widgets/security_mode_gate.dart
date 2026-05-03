@@ -23,7 +23,6 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
   bool _locked = false;
   bool _safetyModeActive = false;
   bool _submitting = false;
-  bool _wasBackgrounded = false;
   String? _error;
 
   void _lockNow() {
@@ -56,14 +55,11 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
-        _wasBackgrounded = true;
+        _lockNow();
         _enforceGateFromStorage(lockIfEnabled: true);
         break;
       case AppLifecycleState.resumed:
-        if (_wasBackgrounded) {
-          _lockNow();
-        }
-        _wasBackgrounded = false;
+        _lockNow();
         _enforceGateFromStorage(lockIfEnabled: true);
         break;
     }
@@ -159,7 +155,28 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
 
   @override
   Widget build(BuildContext context) {
-    if (_loading || !_safetyModeActive || !_locked) {
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 12),
+                Text(
+                  'Verificando seguranca...',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (!_safetyModeActive || !_locked) {
       return widget.child;
     }
 

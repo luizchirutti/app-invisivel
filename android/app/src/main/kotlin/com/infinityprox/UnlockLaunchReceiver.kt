@@ -18,7 +18,14 @@ class UnlockLaunchReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action != Intent.ACTION_USER_PRESENT) {
+        val action = intent?.action
+        if (action != Intent.ACTION_USER_PRESENT &&
+            action != Intent.ACTION_BOOT_COMPLETED &&
+            action != Intent.ACTION_LOCKED_BOOT_COMPLETED &&
+            action != Intent.ACTION_MY_PACKAGE_REPLACED &&
+            action != Intent.ACTION_USER_UNLOCKED &&
+            action != Intent.ACTION_SCREEN_ON
+        ) {
             return
         }
 
@@ -47,6 +54,14 @@ class UnlockLaunchReceiver : BroadcastReceiver() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        }
+
+        // Melhor esforço: abrir a Activity imediatamente.
+        // Em versões recentes o SO pode bloquear abertura em background;
+        // por isso mantemos notificação full-screen como fallback.
+        runCatching {
+            context.startActivity(launchIntent)
         }
 
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -64,6 +79,7 @@ class UnlockLaunchReceiver : BroadcastReceiver() {
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(true)
+            .setOngoing(true)
             .setFullScreenIntent(pendingIntent, true)
             .setContentIntent(pendingIntent)
             .build()

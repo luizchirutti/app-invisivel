@@ -76,6 +76,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
   bool _isUnlockPinConfigured = false;
   bool _isSafetyModeEnabled = false;
   bool _isDeviceAdminActive = false;
+  bool _notificationPermissionGranted = true;
+  bool _fullScreenIntentPermissionGranted = true;
   SecurityScanResult? _lastScan;
   List<String> _customBlocklistPackages = [
     'com.flexispy.android',
@@ -824,13 +826,51 @@ class _ProtectionPageState extends State<ProtectionPage> {
     final unlockConfigured = await _duressSecurityService.isUnlockPinConfigured();
     final safetyModeEnabled = await _duressSecurityService.isSafetyModeEnabled();
     final adminActive = await _duressSecurityService.isDeviceAdminActive();
+    final fullScreenPermission = await _duressSecurityService.isFullScreenIntentPermissionGranted();
+    final notificationPermission = kIsWeb ||
+        defaultTargetPlatform != TargetPlatform.android ||
+        await Permission.notification.isGranted;
     if (!mounted) return;
     setState(() {
       _isDuressPinConfigured = duressConfigured;
       _isUnlockPinConfigured = unlockConfigured;
       _isSafetyModeEnabled = safetyModeEnabled && duressConfigured && unlockConfigured;
       _isDeviceAdminActive = adminActive;
+      _notificationPermissionGranted = notificationPermission;
+      _fullScreenIntentPermissionGranted = fullScreenPermission;
     });
+  }
+
+  Future<bool> _ensureCriticalSafetyPermissions({required bool interactive}) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return true;
+    }
+
+    var notificationGranted = await Permission.notification.isGranted;
+    if (!notificationGranted && interactive) {
+      final status = await Permission.notification.request();
+      notificationGranted = status.isGranted;
+      if (!notificationGranted) {
+        await openAppSettings();
+      }
+    }
+
+    var fullScreenGranted = await _duressSecurityService.isFullScreenIntentPermissionGranted();
+    if (!fullScreenGranted && interactive) {
+      await _duressSecurityService.openFullScreenIntentSettings();
+      fullScreenGranted = await _duressSecurityService.isFullScreenIntentPermissionGranted();
+    }
+
+    if (!mounted) {
+      return notificationGranted && fullScreenGranted;
+    }
+
+    setState(() {
+      _notificationPermissionGranted = notificationGranted;
+      _fullScreenIntentPermissionGranted = fullScreenGranted;
+    });
+
+    return notificationGranted && fullScreenGranted;
   }
 
   Future<void> _configureUnlockPin() async {
@@ -866,6 +906,21 @@ class _ProtectionPageState extends State<ProtectionPage> {
         ),
       );
       return;
+    }
+
+    if (enabled) {
+      final permissionsReady = await _ensureCriticalSafetyPermissions(interactive: true);
+      if (!permissionsReady) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Permissoes criticas ausentes. Libere notificacoes e Full Screen Intent para forcar retorno imediato.',
+            ),
+          ),
+        );
+        return;
+      }
     }
 
     await _duressSecurityService.setSafetyModeEnabled(enabled);
@@ -1064,6 +1119,66 @@ class _ProtectionPageState extends State<ProtectionPage> {
               style: TextStyle(fontSize: 12, color: Colors.grey[700]),
             ),
             const SizedBox(height: 12),
+
+            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: (_notificationPermissionGranted && _fullScreenIntentPermissionGranted)
+                      ? Colors.green[50]
+                      : Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: (_notificationPermissionGranted && _fullScreenIntentPermissionGranted)
+                        ? Colors.green[300]!
+                        : Colors.red[300]!,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      (_notificationPermissionGranted && _fullScreenIntentPermissionGranted)
+                          ? 'Permissoes de resposta imediata: OK'
+                          : 'Permissoes criticas pendentes para resposta imediata',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: (_notificationPermissionGranted && _fullScreenIntentPermissionGranted)
+                            ? Colors.green[900]
+                            : Colors.red[900],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Notificacoes: ${_notificationPermissionGranted ? 'liberado' : 'bloqueado'} | Full Screen Intent: ${_fullScreenIntentPermissionGranted ? 'liberado' : 'bloqueado'}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: (_notificationPermissionGranted && _fullScreenIntentPermissionGranted)
+                            ? Colors.green[800]
+                            : Colors.red[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!_fullScreenIntentPermissionGranted) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await _duressSecurityService.openFullScreenIntentSettings();
+                      await _loadDuressPinStatus();
+                    },
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Liberar Full Screen Intent'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700]),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+            ],
 
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
@@ -1367,7 +1482,10 @@ class _ProtectionPageState extends State<ProtectionPage> {
     super.initState();
     // Carregar status inicial
     context.read<ProtectionBloc>().add(const GetStatusEvent());
-    _loadDuressPinStatus();
+    Future.microtask(() async {
+      await _ensureCriticalSafetyPermissions(interactive: false);
+      await _loadDuressPinStatus();
+    });
   }
 
   @override
@@ -1448,7 +1566,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
               SliverAppBar(
                 backgroundColor: Colors.transparent,
                 elevation: 0,
-                toolbarHeight: 80,
+                toolbarHeight: 124,
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
                     decoration: BoxDecoration(
