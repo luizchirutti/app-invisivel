@@ -102,6 +102,8 @@ class MainActivity: FlutterActivity() {
                         val unlockPinConfigured = call.argument<Boolean>("unlockPinConfigured") ?: false
                         setNativeSafetyFlags(safetyModeEnabled, unlockPinConfigured, result)
                     }
+                    "startLockEnforcementService" -> startLockEnforcementService(result)
+                    "stopLockEnforcementService" -> stopLockEnforcementService(result)
                     "isFullScreenIntentPermissionGranted" -> isFullScreenIntentPermissionGranted(result)
                     "openFullScreenIntentSettings" -> openFullScreenIntentSettings(result)
                     else -> result.notImplemented()
@@ -291,10 +293,50 @@ class MainActivity: FlutterActivity() {
                 .edit()
                 .putBoolean(nativeSafetyEnabledKey, shouldEnforce)
                 .apply()
+            // Inicia ou para o serviço de vigilância de forma automática
+            if (shouldEnforce) {
+                doStartLockEnforcementService()
+            } else {
+                doStopLockEnforcementService()
+            }
             result.success(true)
         } catch (e: Exception) {
             result.error("NATIVE_SAFETY_FLAGS_ERROR", e.message, null)
         }
+    }
+
+    private fun startLockEnforcementService(result: MethodChannel.Result) {
+        try {
+            doStartLockEnforcementService()
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("LOCK_SERVICE_START_ERROR", e.message, null)
+        }
+    }
+
+    private fun stopLockEnforcementService(result: MethodChannel.Result) {
+        try {
+            doStopLockEnforcementService()
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("LOCK_SERVICE_STOP_ERROR", e.message, null)
+        }
+    }
+
+    private fun doStartLockEnforcementService() {
+        val serviceIntent = Intent(this, LockEnforcementService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
+    }
+
+    private fun doStopLockEnforcementService() {
+        val serviceIntent = Intent(this, LockEnforcementService::class.java).apply {
+            action = LockEnforcementService.ACTION_STOP
+        }
+        startService(serviceIntent)
     }
 
     private fun isFullScreenIntentPermissionGranted(result: MethodChannel.Result) {

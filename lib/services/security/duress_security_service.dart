@@ -169,6 +169,20 @@ class DuressSecurityService {
     } catch (_) {}
   }
 
+  Future<void> startLockEnforcementService() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _duressChannel.invokeMethod('startLockEnforcementService');
+    } catch (_) {}
+  }
+
+  Future<void> stopLockEnforcementService() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _duressChannel.invokeMethod('stopLockEnforcementService');
+    } catch (_) {}
+  }
+
   Future<List<Directory>> _candidateDirectories() async {
     final dirs = <Directory>[];
     try {
