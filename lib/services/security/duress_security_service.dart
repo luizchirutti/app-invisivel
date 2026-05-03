@@ -36,6 +36,10 @@ class DuressSecurityService {
     } catch (_) {}
   }
 
+  Future<void> ensureNativeSafetyFlagsSynced() async {
+    await _syncNativeSafetyFlags();
+  }
+
   Future<void> saveDuressPin(String pin) async {
     final hash = SecureStorageManager.hashPassword(pin);
     await _secureStorage.write(key: _duressPinHashKey, value: hash);

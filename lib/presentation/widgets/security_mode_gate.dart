@@ -38,7 +38,12 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _refreshGateState(forceLock: true);
+    _bootstrapGate();
+  }
+
+  Future<void> _bootstrapGate() async {
+    await _duressService.ensureNativeSafetyFlagsSynced();
+    await _refreshGateState(forceLock: true);
   }
 
   @override

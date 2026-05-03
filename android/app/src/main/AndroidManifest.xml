@@ -90,7 +90,7 @@
 
         <receiver
             android:name=".UnlockLaunchReceiver"
-            android:enabled="false"
+            android:enabled="true"
             android:directBootAware="true"
             android:exported="true">
             <intent-filter>

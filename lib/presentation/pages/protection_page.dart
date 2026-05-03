@@ -1483,6 +1483,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
     // Carregar status inicial
     context.read<ProtectionBloc>().add(const GetStatusEvent());
     Future.microtask(() async {
+      await _duressSecurityService.ensureNativeSafetyFlagsSynced();
       await _ensureCriticalSafetyPermissions(interactive: false);
       await _loadDuressPinStatus();
     });

@@ -291,18 +291,6 @@ class MainActivity: FlutterActivity() {
                 .edit()
                 .putBoolean(nativeSafetyEnabledKey, shouldEnforce)
                 .apply()
-
-            val componentState = if (shouldEnforce) {
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            } else {
-                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-            }
-
-            packageManager.setComponentEnabledSetting(
-                ComponentName(this, UnlockLaunchReceiver::class.java),
-                componentState,
-                PackageManager.DONT_KILL_APP
-            )
             result.success(true)
         } catch (e: Exception) {
             result.error("NATIVE_SAFETY_FLAGS_ERROR", e.message, null)
