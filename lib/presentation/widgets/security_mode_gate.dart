@@ -115,6 +115,7 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
     if (!mounted) return;
 
     if (isUnlockPin) {
+      await _duressService.setPendingUnlockEnforcement(false);
       setState(() {
         _locked = false;
         _submitting = false;

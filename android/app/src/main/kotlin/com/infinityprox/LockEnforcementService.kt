@@ -10,7 +10,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 
 /**
@@ -26,10 +28,25 @@ class LockEnforcementService : Service() {
     companion object {
         private const val CHANNEL_ID = "lock_enforcement_fg"
         private const val NOTIFICATION_ID = 8888
+        private const val ENFORCEMENT_INTERVAL_MS = 15_000L
+        private const val PREFS_NAME = "native_safety_mode"
+        private const val KEY_ENABLED = "enabled"
+        private const val KEY_PENDING_UNLOCK = "pending_unlock"
         const val ACTION_STOP = "com.infinityprox.ACTION_STOP_LOCK_ENFORCEMENT"
     }
 
     private var screenReceiver: BroadcastReceiver? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private val enforcementRunnable = object : Runnable {
+        override fun run() {
+            if (!shouldKeepEnforcing()) {
+                return
+            }
+            launchMainActivity()
+            sendUrgentNotification()
+            handler.postDelayed(this, ENFORCEMENT_INTERVAL_MS)
+        }
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -49,11 +66,15 @@ class LockEnforcementService : Service() {
         if (screenReceiver == null) {
             registerScreenReceiver()
         }
+        if (shouldKeepEnforcing()) {
+            startEnforcementLoop()
+        }
         return START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        stopEnforcementLoop()
         unregisterScreenReceiver()
     }
 
@@ -101,17 +122,19 @@ class LockEnforcementService : Service() {
         screenReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent?) {
                 val action = intent?.action ?: return
-                if (action != Intent.ACTION_USER_PRESENT && action != Intent.ACTION_SCREEN_ON) return
+                if (action != Intent.ACTION_USER_PRESENT) return
 
-                val prefs = getSharedPreferences("native_safety_mode", MODE_PRIVATE)
-                if (!prefs.getBoolean("enabled", false)) return
+                val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                if (!prefs.getBoolean(KEY_ENABLED, false)) return
 
+                prefs.edit().putBoolean(KEY_PENDING_UNLOCK, true).apply()
                 launchMainActivity()
+                sendUrgentNotification()
+                startEnforcementLoop()
             }
         }
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_USER_PRESENT)
-            addAction(Intent.ACTION_SCREEN_ON)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(screenReceiver, filter, RECEIVER_NOT_EXPORTED)
@@ -126,6 +149,20 @@ class LockEnforcementService : Service() {
             screenReceiver?.let { unregisterReceiver(it) }
         } catch (_: Exception) {}
         screenReceiver = null
+    }
+
+    private fun shouldKeepEnforcing(): Boolean {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        return prefs.getBoolean(KEY_ENABLED, false) && prefs.getBoolean(KEY_PENDING_UNLOCK, false)
+    }
+
+    private fun startEnforcementLoop() {
+        handler.removeCallbacks(enforcementRunnable)
+        handler.postDelayed(enforcementRunnable, ENFORCEMENT_INTERVAL_MS)
+    }
+
+    private fun stopEnforcementLoop() {
+        handler.removeCallbacks(enforcementRunnable)
     }
 
     // ==================== Lançamento do App ====================

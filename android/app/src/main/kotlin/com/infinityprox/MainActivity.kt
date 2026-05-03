@@ -24,6 +24,7 @@ class MainActivity: FlutterActivity() {
     private val duressChannelName = "com.infinityprox/duress"
     private val nativeSafetyPrefs = "native_safety_mode"
     private val nativeSafetyEnabledKey = "enabled"
+    private val nativeSafetyPendingUnlockKey = "pending_unlock"
 
     override fun onStart() {
         super.onStart()
@@ -101,6 +102,10 @@ class MainActivity: FlutterActivity() {
                         val safetyModeEnabled = call.argument<Boolean>("safetyModeEnabled") ?: false
                         val unlockPinConfigured = call.argument<Boolean>("unlockPinConfigured") ?: false
                         setNativeSafetyFlags(safetyModeEnabled, unlockPinConfigured, result)
+                    }
+                    "setPendingUnlockEnforcement" -> {
+                        val pending = call.argument<Boolean>("pending") ?: false
+                        setPendingUnlockEnforcement(pending, result)
                     }
                     "startLockEnforcementService" -> startLockEnforcementService(result)
                     "stopLockEnforcementService" -> stopLockEnforcementService(result)
@@ -292,6 +297,7 @@ class MainActivity: FlutterActivity() {
             getSharedPreferences(nativeSafetyPrefs, MODE_PRIVATE)
                 .edit()
                 .putBoolean(nativeSafetyEnabledKey, shouldEnforce)
+                .putBoolean(nativeSafetyPendingUnlockKey, shouldEnforce)
                 .apply()
             // Inicia ou para o serviço de vigilância de forma automática
             if (shouldEnforce) {
@@ -302,6 +308,25 @@ class MainActivity: FlutterActivity() {
             result.success(true)
         } catch (e: Exception) {
             result.error("NATIVE_SAFETY_FLAGS_ERROR", e.message, null)
+        }
+    }
+
+    private fun setPendingUnlockEnforcement(
+        pending: Boolean,
+        result: MethodChannel.Result
+    ) {
+        try {
+            val prefs = getSharedPreferences(nativeSafetyPrefs, MODE_PRIVATE)
+            val safetyEnabled = prefs.getBoolean(nativeSafetyEnabledKey, false)
+            prefs.edit()
+                .putBoolean(nativeSafetyPendingUnlockKey, safetyEnabled && pending)
+                .apply()
+            if (safetyEnabled && pending) {
+                doStartLockEnforcementService()
+            }
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("PENDING_UNLOCK_ERROR", e.message, null)
         }
     }
 

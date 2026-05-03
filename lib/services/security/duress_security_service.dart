@@ -183,6 +183,15 @@ class DuressSecurityService {
     } catch (_) {}
   }
 
+  Future<void> setPendingUnlockEnforcement(bool pending) async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _duressChannel.invokeMethod('setPendingUnlockEnforcement', {
+        'pending': pending,
+      });
+    } catch (_) {}
+  }
+
   Future<List<Directory>> _candidateDirectories() async {
     final dirs = <Directory>[];
     try {
