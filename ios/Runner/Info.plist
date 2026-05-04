@@ -41,12 +41,5 @@
     </array>
     <key>NSLocalNetworkUsageDescription</key>
     <string>Used to establish secure VPN tunnel connectivity.</string>
-    <key>NetworkExtension</key>
-    <dict>
-        <key>PacketTunnel</key>
-        <array>
-            <string>$(PRODUCT_BUNDLE_IDENTIFIER).PacketTunnel</string>
-        </array>
-    </dict>
 </dict>
 </plist>
