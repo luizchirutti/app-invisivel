@@ -4,11 +4,13 @@ package com.infinityprox
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.text.TextUtils
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -109,6 +111,8 @@ class MainActivity: FlutterActivity() {
                     }
                     "startLockEnforcementService" -> startLockEnforcementService(result)
                     "stopLockEnforcementService" -> stopLockEnforcementService(result)
+                    "isAccessibilityServiceEnabled" -> isAccessibilityServiceEnabled(result)
+                    "openAccessibilitySettings" -> openAccessibilitySettings(result)
                     "isFullScreenIntentPermissionGranted" -> isFullScreenIntentPermissionGranted(result)
                     "openFullScreenIntentSettings" -> openFullScreenIntentSettings(result)
                     else -> result.notImplemented()
@@ -362,6 +366,41 @@ class MainActivity: FlutterActivity() {
             action = LockEnforcementService.ACTION_STOP
         }
         startService(serviceIntent)
+    }
+
+    private fun isAccessibilityServiceEnabled(result: MethodChannel.Result) {
+        try {
+            val enabled = isLockAccessibilityServiceEnabled()
+            result.success(enabled)
+        } catch (e: Exception) {
+            result.error("ACCESSIBILITY_CHECK_ERROR", e.message, null)
+        }
+    }
+
+    private fun isLockAccessibilityServiceEnabled(): Boolean {
+        val expectedServiceId = "$packageName/${LockAccessibilityService::class.java.canonicalName}"
+        val enabledServices = Settings.Secure.getString(
+            contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        val colonSplitter = TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServices)
+        while (colonSplitter.hasNext()) {
+            if (colonSplitter.next().equals(expectedServiceId, ignoreCase = true)) return true
+        }
+        return false
+    }
+
+    private fun openAccessibilitySettings(result: MethodChannel.Result) {
+        try {
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("ACCESSIBILITY_SETTINGS_ERROR", e.message, null)
+        }
     }
 
     private fun isFullScreenIntentPermissionGranted(result: MethodChannel.Result) {

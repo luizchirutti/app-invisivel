@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">App Invisível</string>
+    <string name="accessibility_service_label">Modo Segurança – Proteção de desbloqueio</string>
+    <string name="accessibility_service_description">Quando o Modo Segurança estiver ativo, este serviço impede o acesso a outros apps ou às Configurações até que o PIN seguro seja digitado. Ele não lê conteúdo de tela nem envia dados.</string>
+</resources>

@@ -183,6 +183,23 @@ class DuressSecurityService {
     } catch (_) {}
   }
 
+  Future<bool> isAccessibilityServiceEnabled() async {
+    if (kIsWeb || !Platform.isAndroid) return true;
+    try {
+      final result = await _duressChannel.invokeMethod<bool>('isAccessibilityServiceEnabled');
+      return result == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> openAccessibilitySettings() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _duressChannel.invokeMethod('openAccessibilitySettings');
+    } catch (_) {}
+  }
+
   Future<void> setPendingUnlockEnforcement(bool pending) async {
     if (kIsWeb || !Platform.isAndroid) return;
     try {

@@ -78,6 +78,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
   bool _isDeviceAdminActive = false;
   bool _notificationPermissionGranted = true;
   bool _fullScreenIntentPermissionGranted = true;
+  bool _accessibilityServiceEnabled = true;
   SecurityScanResult? _lastScan;
   List<String> _customBlocklistPackages = [
     'com.flexispy.android',
@@ -827,6 +828,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
     final safetyModeEnabled = await _duressSecurityService.isSafetyModeEnabled();
     final adminActive = await _duressSecurityService.isDeviceAdminActive();
     final fullScreenPermission = await _duressSecurityService.isFullScreenIntentPermissionGranted();
+    final accessibilityEnabled = await _duressSecurityService.isAccessibilityServiceEnabled();
     final notificationPermission = kIsWeb ||
         defaultTargetPlatform != TargetPlatform.android ||
         await Permission.notification.isGranted;
@@ -838,6 +840,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
       _isDeviceAdminActive = adminActive;
       _notificationPermissionGranted = notificationPermission;
       _fullScreenIntentPermissionGranted = fullScreenPermission;
+      _accessibilityServiceEnabled = accessibilityEnabled;
     });
   }
 
@@ -861,6 +864,37 @@ class _ProtectionPageState extends State<ProtectionPage> {
       fullScreenGranted = await _duressSecurityService.isFullScreenIntentPermissionGranted();
     }
 
+    var accessibilityGranted = await _duressSecurityService.isAccessibilityServiceEnabled();
+    if (!accessibilityGranted && interactive) {
+      if (mounted) {
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Permissão de Acessibilidade'),
+            content: const Text(
+              'Para bloquear outros apps até o PIN ser digitado, ative o serviço '
+              '"Modo Segurança" em Configurações → Acessibilidade.\n\n'
+              'Ele NÃO lê conteúdo de tela nem envia dados. Apenas detecta troca de app.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Agora não'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.of(ctx).pop();
+                  await _duressSecurityService.openAccessibilitySettings();
+                },
+                child: const Text('Abrir Configurações'),
+              ),
+            ],
+          ),
+        );
+      }
+      accessibilityGranted = await _duressSecurityService.isAccessibilityServiceEnabled();
+    }
+
     if (!mounted) {
       return notificationGranted && fullScreenGranted;
     }
@@ -868,6 +902,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
     setState(() {
       _notificationPermissionGranted = notificationGranted;
       _fullScreenIntentPermissionGranted = fullScreenGranted;
+      _accessibilityServiceEnabled = accessibilityGranted;
     });
 
     return notificationGranted && fullScreenGranted;
@@ -1174,6 +1209,85 @@ class _ProtectionPageState extends State<ProtectionPage> {
                     icon: const Icon(Icons.open_in_new),
                     label: const Text('Liberar Full Screen Intent'),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700]),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+            ],
+
+            // Card de permissão de acessibilidade (bloqueio de outros apps)
+            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[  
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _accessibilityServiceEnabled ? Colors.green[50] : Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _accessibilityServiceEnabled ? Colors.green[300]! : Colors.orange[300]!,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _accessibilityServiceEnabled
+                          ? '🔒 Bloqueio de outros apps: ATIVO'
+                          : '⚠️ Bloqueio de outros apps: INATIVO',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _accessibilityServiceEnabled ? Colors.green[900] : Colors.orange[900],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _accessibilityServiceEnabled
+                          ? 'O serviço de acessibilidade está ativo. Nenhum outro app abrirá com desbloqueio pendente.'
+                          : 'Sem o serviço de acessibilidade, outros apps podem abrir. Ative para bloqueio total.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: _accessibilityServiceEnabled ? Colors.green[800] : Colors.orange[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!_accessibilityServiceEnabled) ...[  
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Bloqueio total de outros apps'),
+                          content: const Text(
+                            'Ao ativar, o serviço "Modo Segurança" em Acessibilidade detecta '
+                            'quando outro app ou Configurações entra em foco e imediatamente '
+                            'retorna para a tela de PIN.\n\n'
+                            'Ele NÃO lê conteúdo de tela e NÃO envia dados.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(),
+                              child: const Text('Cancelar'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () async {
+                                Navigator.of(ctx).pop();
+                                await _duressSecurityService.openAccessibilitySettings();
+                                await _loadDuressPinStatus();
+                              },
+                              child: const Text('Abrir Acessibilidade'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.accessibility_new),
+                    label: const Text('Ativar bloqueio total de outros apps'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[700]),
                   ),
                 ),
               ],
