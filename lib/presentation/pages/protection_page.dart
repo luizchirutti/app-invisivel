@@ -1326,51 +1326,79 @@ class _ProtectionPageState extends State<ProtectionPage> {
 
             const SizedBox(height: 10),
 
-            // Status do Device Admin
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: _isDeviceAdminActive ? Colors.green[50] : Colors.orange[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _isDeviceAdminActive ? Colors.green[300]! : Colors.orange[300]!,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _isDeviceAdminActive ? Icons.verified_user : Icons.warning_amber,
-                    color: _isDeviceAdminActive ? Colors.green[700] : Colors.orange[700],
-                    size: 18,
+            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
+              // Status do Device Admin (somente Android)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _isDeviceAdminActive ? Colors.green[50] : Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _isDeviceAdminActive ? Colors.green[300]! : Colors.orange[300]!,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _isDeviceAdminActive
-                          ? 'Administrador do dispositivo: ATIVO — reset de fabrica habilitado'
-                          : 'Administrador do dispositivo: INATIVO — ative para reset de fabrica',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: _isDeviceAdminActive ? Colors.green[800] : Colors.orange[800],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _isDeviceAdminActive ? Icons.verified_user : Icons.warning_amber,
+                      color: _isDeviceAdminActive ? Colors.green[700] : Colors.orange[700],
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _isDeviceAdminActive
+                            ? 'Administrador do dispositivo: ATIVO — reset de fabrica habilitado'
+                            : 'Administrador do dispositivo: INATIVO — ative para reset de fabrica',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _isDeviceAdminActive ? Colors.green[800] : Colors.orange[800],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            if (!_isDeviceAdminActive) ...[
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    await _duressSecurityService.requestDeviceAdmin();
-                    await _loadDuressPinStatus();
-                  },
-                  icon: const Icon(Icons.admin_panel_settings),
-                  label: const Text('Ativar admin do dispositivo'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[700]),
+              if (!_isDeviceAdminActive) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await _duressSecurityService.requestDeviceAdmin();
+                      await _loadDuressPinStatus();
+                    },
+                    icon: const Icon(Icons.admin_panel_settings),
+                    label: const Text('Ativar admin do dispositivo'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[700]),
+                  ),
+                ),
+              ],
+            ] else ...[
+              // iOS não possui Device Admin; mostrar limitação explicitamente.
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue[700], size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No iOS, o sistema não oferece "Admin do dispositivo" nem permite abrir este app automaticamente ao desbloquear.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue[800],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
