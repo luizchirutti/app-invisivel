@@ -41,5 +41,9 @@
     </array>
     <key>NSLocalNetworkUsageDescription</key>
     <string>Used to establish secure VPN tunnel connectivity.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Used to determine Wi-Fi network details required by security features.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Used to determine Wi-Fi network details required by security features.</string>
 </dict>
 </plist>
