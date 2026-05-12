@@ -322,6 +322,18 @@ class _ProtectionPageState extends State<ProtectionPage> {
     );
   }
 
+  bool _isIosVpnPermissionError(String message) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
+      return false;
+    }
+
+    final lower = message.toLowerCase();
+    return lower.contains('vpn_load_error') ||
+        lower.contains('permission denied') ||
+        lower.contains('vpn_save_error') ||
+        lower.contains('neconfigurationerror');
+  }
+
   Future<SecurityScanResult> _runSecurityScan({bool silent = false}) async {
     setState(() {
       _isScanning = true;
@@ -1713,12 +1725,21 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 body: 'A protecao foi desativada. Reative para manter sua seguranca.',
               );
             } else if (state is ProtectionError) {
-              _addLogEntry('❌ Erro: ${state.message}');
-              _alertService.upsertReminder(
-                reasonKey: 'protection_failure',
-                title: 'Falha de seguranca detectada',
-                body: state.message,
-              );
+              if (_isIosVpnPermissionError(state.message)) {
+                _addLogEntry('⚠️ VPN indisponivel neste iPhone. Escudo parcial ativo.');
+                _alertService.upsertReminder(
+                  reasonKey: 'protection_partial',
+                  title: 'Escudo parcial ativo',
+                  body: 'Permissao de VPN indisponivel no iOS. Protecoes locais continuam ativas.',
+                );
+              } else {
+                _addLogEntry('❌ Erro: ${state.message}');
+                _alertService.upsertReminder(
+                  reasonKey: 'protection_failure',
+                  title: 'Falha de seguranca detectada',
+                  body: state.message,
+                );
+              }
             }
           },
           child: CustomScrollView(
@@ -1818,6 +1839,42 @@ class _ProtectionPageState extends State<ProtectionPage> {
                             threatsSummary: 'Proteção desativada',
                           );
                         } else if (state is ProtectionError) {
+                          if (_isIosVpnPermissionError(state.message)) {
+                            return Card(
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  children: const [
+                                    Icon(
+                                      Icons.shield_outlined,
+                                      color: Colors.orange,
+                                      size: 48,
+                                    ),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'Escudo parcial ativo neste iPhone',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'A permissao de VPN do iOS nao esta disponivel. O app continua com as demais camadas de seguranca ativas.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+
                           return Card(
                             elevation: 4,
                             shape: RoundedRectangleBorder(
