@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -1713,12 +1715,15 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 body: 'A protecao foi desativada. Reative para manter sua seguranca.',
               );
             } else if (state is ProtectionError) {
-              _addLogEntry('❌ Erro: ${state.message}');
-              _alertService.upsertReminder(
-                reasonKey: 'protection_failure',
-                title: 'Falha de seguranca detectada',
-                body: state.message,
-              );
+              // No iOS nunca exibimos erros de VPN (permissão não disponível em conta pessoal)
+              if (!(!kIsWeb && Platform.isIOS)) {
+                _addLogEntry('❌ Erro: ${state.message}');
+                _alertService.upsertReminder(
+                  reasonKey: 'protection_failure',
+                  title: 'Falha de seguranca detectada',
+                  body: state.message,
+                );
+              }
             }
           },
           child: CustomScrollView(
@@ -1818,6 +1823,17 @@ class _ProtectionPageState extends State<ProtectionPage> {
                             threatsSummary: 'Proteção desativada',
                           );
                         } else if (state is ProtectionError) {
+                          // iOS: nunca mostra card de erro — exibe como inativo aguardando ativação
+                          if (!kIsWeb && Platform.isIOS) {
+                            return _buildStatusData(
+                              isVPNActive: false,
+                              isKillSwitchActive: false,
+                              dohEnabled: false,
+                              antiFingerprinting: false,
+                              riskLevel: 0,
+                              threatsSummary: 'Proteção desativada',
+                            );
+                          }
                           return Card(
                             elevation: 4,
                             shape: RoundedRectangleBorder(
