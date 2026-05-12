@@ -1825,7 +1825,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                         } else if (state is ProtectionError) {
                           // iOS: nunca mostra card de erro — exibe como inativo aguardando ativação
                           if (!kIsWeb && Platform.isIOS) {
-                            return _buildStatusData(
+                            return ProtectionStatusCard(
                               isVPNActive: false,
                               isKillSwitchActive: false,
                               dohEnabled: false,
