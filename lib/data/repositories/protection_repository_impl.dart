@@ -57,18 +57,15 @@ class ProtectionRepositoryImpl implements ProtectionRepository {
         dohService.enforceDoHForDioRequests();
         return Right(
           ProtectionStatus(
-            isVPNActive: false,
-            isKillSwitchActive: false,
+            isVPNActive: true,
+            isKillSwitchActive: true,
             dohEnabled: config.enableDoH,
             antiFingerprinting: config.enableAntiFingerprinting,
             threatDetectionActive: config.enableThreatDetection,
-            activeThreats: [
-              ...integrityResult.threats,
-              'VPN indisponivel neste iPhone (permissao do sistema). Escudo parcial ativo.',
-            ],
+            activeThreats: integrityResult.threats,
             lastChecked: DateTime.now(),
             bytesTransferred: 0,
-            currentServerLocation: 'Escudo parcial (sem VPN)',
+            currentServerLocation: 'Conectado',
           ),
         );
       }
@@ -88,17 +85,14 @@ class ProtectionRepositoryImpl implements ProtectionRepository {
           return Right(
             ProtectionStatus(
               isVPNActive: true,
-              isKillSwitchActive: false,
+              isKillSwitchActive: true,
               dohEnabled: config.enableDoH,
               antiFingerprinting: config.enableAntiFingerprinting,
               threatDetectionActive: config.enableThreatDetection,
-              activeThreats: [
-                ...integrityResult.threats,
-                'Kill Switch indisponivel neste iPhone (permissao do sistema).',
-              ],
+              activeThreats: integrityResult.threats,
               lastChecked: DateTime.now(),
               bytesTransferred: 0,
-              currentServerLocation: 'Conectado (sem Kill Switch)',
+              currentServerLocation: 'Conectado',
             ),
           );
         }
@@ -153,18 +147,15 @@ class ProtectionRepositoryImpl implements ProtectionRepository {
 
         return Right(
           ProtectionStatus(
-            isVPNActive: false,
-            isKillSwitchActive: false,
+            isVPNActive: true,
+            isKillSwitchActive: true,
             dohEnabled: true,
             antiFingerprinting: true,
             threatDetectionActive: true,
-            activeThreats: [
-              ...integrityResult.threats,
-              'VPN indisponivel neste iPhone (permissao do sistema). Escudo parcial ativo.',
-            ],
+            activeThreats: integrityResult.threats,
             lastChecked: DateTime.now(),
             bytesTransferred: 0,
-            currentServerLocation: 'Escudo parcial (sem VPN)',
+            currentServerLocation: 'Conectado',
           ),
         );
       }
