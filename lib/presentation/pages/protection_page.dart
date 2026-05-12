@@ -917,6 +917,15 @@ class _ProtectionPageState extends State<ProtectionPage> {
 
     if (pin == null) return;
 
+    final matchesDuress = await _duressSecurityService.verifyDuressPin(pin);
+    if (matchesDuress) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PIN seguro nao pode ser igual ao PIN de coacao.')),
+      );
+      return;
+    }
+
     try {
       await _duressSecurityService.saveUnlockPin(pin);
       await _loadDuressPinStatus();
@@ -973,6 +982,15 @@ class _ProtectionPageState extends State<ProtectionPage> {
     );
 
     if (pin == null) return;
+
+    final matchesUnlock = await _duressSecurityService.verifyUnlockPin(pin);
+    if (matchesUnlock) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PIN de coacao nao pode ser igual ao PIN seguro.')),
+      );
+      return;
+    }
 
     try {
       await _duressSecurityService.saveDuressPin(pin);

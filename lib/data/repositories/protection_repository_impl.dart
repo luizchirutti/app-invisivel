@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dartz/dartz.dart';
 import '../../domain/entities/entities.dart';
 import '../../domain/repositories/repositories.dart';
@@ -44,9 +46,29 @@ class ProtectionRepositoryImpl implements ProtectionRepository {
       );
 
       if (connectResult.isLeft()) {
-        return Left(
-          connectResult.swap().getOrElse(
-            () => VPNConnectionFailure('Falha ao conectar VPN'),
+        final connectFailure = connectResult.swap().getOrElse(
+          () => VPNConnectionFailure('Falha ao conectar VPN'),
+        );
+
+        if (!_shouldFallbackToShieldMode(connectFailure)) {
+          return Left(connectFailure);
+        }
+
+        dohService.enforceDoHForDioRequests();
+        return Right(
+          ProtectionStatus(
+            isVPNActive: false,
+            isKillSwitchActive: false,
+            dohEnabled: config.enableDoH,
+            antiFingerprinting: config.enableAntiFingerprinting,
+            threatDetectionActive: config.enableThreatDetection,
+            activeThreats: [
+              ...integrityResult.threats,
+              'VPN indisponivel neste iPhone (permissao do sistema). Escudo parcial ativo.',
+            ],
+            lastChecked: DateTime.now(),
+            bytesTransferred: 0,
+            currentServerLocation: 'Escudo parcial (sem VPN)',
           ),
         );
       }
@@ -54,9 +76,29 @@ class ProtectionRepositoryImpl implements ProtectionRepository {
       if (config.enableKillSwitch) {
         final ksResult = await vpnService.setKillSwitch(true);
         if (ksResult.isLeft()) {
-          return Left(
-            ksResult.swap().getOrElse(
-              () => VPNConnectionFailure('Falha ao ativar Kill Switch'),
+          final ksFailure = ksResult.swap().getOrElse(
+            () => VPNConnectionFailure('Falha ao ativar Kill Switch'),
+          );
+
+          if (!_shouldFallbackToShieldMode(ksFailure)) {
+            return Left(ksFailure);
+          }
+
+          dohService.enforceDoHForDioRequests();
+          return Right(
+            ProtectionStatus(
+              isVPNActive: true,
+              isKillSwitchActive: false,
+              dohEnabled: config.enableDoH,
+              antiFingerprinting: config.enableAntiFingerprinting,
+              threatDetectionActive: config.enableThreatDetection,
+              activeThreats: [
+                ...integrityResult.threats,
+                'Kill Switch indisponivel neste iPhone (permissao do sistema).',
+              ],
+              lastChecked: DateTime.now(),
+              bytesTransferred: 0,
+              currentServerLocation: 'Conectado (sem Kill Switch)',
             ),
           );
         }
@@ -101,9 +143,28 @@ class ProtectionRepositoryImpl implements ProtectionRepository {
       final integrityResult = await integrityService.checkDeviceIntegrity();
 
       if (vpnStatusResult.isLeft()) {
-        return Left(
-          vpnStatusResult.swap().getOrElse(
-            () => AppFailure('Falha ao obter status da VPN'),
+        final statusFailure = vpnStatusResult.swap().getOrElse(
+          () => AppFailure('Falha ao obter status da VPN'),
+        );
+
+        if (!_shouldFallbackToShieldMode(statusFailure)) {
+          return Left(statusFailure);
+        }
+
+        return Right(
+          ProtectionStatus(
+            isVPNActive: false,
+            isKillSwitchActive: false,
+            dohEnabled: true,
+            antiFingerprinting: true,
+            threatDetectionActive: true,
+            activeThreats: [
+              ...integrityResult.threats,
+              'VPN indisponivel neste iPhone (permissao do sistema). Escudo parcial ativo.',
+            ],
+            lastChecked: DateTime.now(),
+            bytesTransferred: 0,
+            currentServerLocation: 'Escudo parcial (sem VPN)',
           ),
         );
       }
@@ -139,5 +200,17 @@ class ProtectionRepositoryImpl implements ProtectionRepository {
   Stream<ProtectionStatus> getStatusChanges() {
     // TODO: Implementar stream de mudanças de status
     return Stream.empty();
+  }
+
+  bool _shouldFallbackToShieldMode(Failure failure) {
+    if (!Platform.isIOS) {
+      return false;
+    }
+
+    final message = failure.message.toLowerCase();
+    return message.contains('vpn_load_error') ||
+        message.contains('permission denied') ||
+        message.contains('vpn_save_error') ||
+        message.contains('neconfigurationerror');
   }
 }

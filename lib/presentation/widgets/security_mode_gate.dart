@@ -105,12 +105,6 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
       _error = null;
     });
 
-    final isDuressPin = await _duressService.verifyDuressPin(enteredPin);
-    if (isDuressPin) {
-      await _executeDuressAction();
-      return;
-    }
-
     final isUnlockPin = await _duressService.verifyUnlockPin(enteredPin);
     if (!mounted) return;
 
@@ -122,6 +116,12 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
         _error = null;
       });
       _pinController.clear();
+      return;
+    }
+
+    final isDuressPin = await _duressService.verifyDuressPin(enteredPin);
+    if (isDuressPin) {
+      await _executeDuressAction();
       return;
     }
 
