@@ -194,14 +194,11 @@ class ProtectionRepositoryImpl implements ProtectionRepository {
   }
 
   bool _shouldFallbackToShieldMode(Failure failure) {
+    // No iOS com conta pessoal Apple, a VPN nunca terá permissão de entitlement.
+    // Fazemos fallback para shield mode em qualquer erro de VPN no iOS.
     if (!Platform.isIOS) {
       return false;
     }
-
-    final message = failure.message.toLowerCase();
-    return message.contains('vpn_load_error') ||
-        message.contains('permission denied') ||
-        message.contains('vpn_save_error') ||
-        message.contains('neconfigurationerror');
+    return true;
   }
 }

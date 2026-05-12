@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
+import 'package:path_provider/path_provider.dart';
 import 'presentation/pages/protection_page.dart';
 import 'presentation/bloc/protection_bloc.dart';
 import 'domain/usecases/protection_usecases.dart';
@@ -20,6 +24,9 @@ final getIt = GetIt.instance;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Limpa Keychain se for a primeira execução após reinstalação
+  await _clearKeychainOnFreshInstall();
+
   try {
     // Inicializar serviços de segurança
     await _setupSecurityServices();
@@ -37,6 +44,28 @@ void main() async {
   }
 
   runApp(const AppInvisivel());
+}
+
+/// Detecta reinstalação e limpa o Keychain do iOS para evitar persistência de PINs.
+/// O Keychain sobrevive à desinstalação; um arquivo sentinela no diretório de documentos
+/// (que é apagado na desinstalação) serve como flag de instalação nova.
+Future<void> _clearKeychainOnFreshInstall() async {
+  if (kIsWeb || !Platform.isIOS) return;
+
+  try {
+    final dir = await getApplicationDocumentsDirectory();
+    final sentinel = File('${dir.path}/.app_keychain_init');
+
+    if (!sentinel.existsSync()) {
+      // Primeira execução após instalação — limpar Keychain legado
+      const storage = FlutterSecureStorage();
+      await storage.deleteAll();
+      await sentinel.create(recursive: true);
+      debugPrint('[Init] Keychain limpo na primeira execução após instalação.');
+    }
+  } catch (e) {
+    debugPrint('[Init] Erro ao verificar sentinel de instalação: $e');
+  }
 }
 
 /// Inicializa serviços de segurança
