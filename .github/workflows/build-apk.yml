@@ -123,7 +123,12 @@ jobs:
         run: pod install --project-directory=ios
 
       - name: Instalar Codemagic CLI tools
-        run: pip3 install codemagic-cli-tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/codemagic-cli"
+          source "$RUNNER_TEMP/codemagic-cli/bin/activate"
+          python -m pip install --upgrade pip
+          python -m pip install codemagic-cli-tools
+          echo "$RUNNER_TEMP/codemagic-cli/bin" >> "$GITHUB_PATH"
 
       - name: Preparar assinatura iOS
         run: |
@@ -176,4 +181,7 @@ jobs:
 
       - name: Restaurar keychain padrao
         if: always()
-        run: keychain use-login
+        run: |
+          if command -v keychain >/dev/null 2>&1; then
+            keychain use-login
+          fi
