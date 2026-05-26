@@ -39,6 +39,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Selecionar Xcode atual
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
