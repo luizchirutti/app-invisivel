@@ -25,6 +25,32 @@ Variaveis aceitas:
 
 Observacao importante: este controle e local ao app. Ele ajuda a bloquear o primeiro acesso, mas nao conta instalacoes nem impede compartilhamento de codigo. Para controle real de quantidade de instalacoes, revogacao e auditoria, o correto e validar a ativacao em backend.
 
+## Publicacao iOS sem Mac local
+
+O repositório possui o workflow [build-ios-appstore.yml](.github/workflows/build-ios-appstore.yml) para gerar um `.ipa` assinado em runner macOS do GitHub Actions e enviar o build para o App Store Connect.
+
+Secrets necessarios no GitHub:
+
+- `APP_STORE_CONNECT_ISSUER_ID`
+- `APP_STORE_CONNECT_KEY_IDENTIFIER`
+- `APP_STORE_CONNECT_PRIVATE_KEY`
+- `APP_STORE_CONNECT_CERTIFICATE_KEY`
+- `APP_ACTIVATION_REQUIRED`
+- `APP_ACTIVATION_TOTP_SECRET`
+
+Como obter os principais valores:
+
+- `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_KEY_IDENTIFIER` e `APP_STORE_CONNECT_PRIVATE_KEY`: crie uma App Store Connect API Key em Users and Access > Integrations > App Store Connect API.
+- `APP_STORE_CONNECT_CERTIFICATE_KEY`: gere uma chave RSA PEM nova para o certificado de distribuicao que o workflow criara automaticamente.
+
+Exemplo para gerar `APP_STORE_CONNECT_CERTIFICATE_KEY`:
+
+```bash
+ssh-keygen -t rsa -b 2048 -m PEM -f cert_key -q -N ""
+```
+
+Depois use o conteudo do arquivo `cert_key` como secret no GitHub.
+
 ## 📋 Visão Geral
 
 **App Invisível** é um MVP (Minimum Viable Product) de aplicativo de segurança privada desenvolvido em Flutter, focado em **anonimato extremo** e **anti-rastreio**. O projeto implementa uma arquitetura de segurança de classe empresarial com as melhores práticas de criptografia e privacidade.

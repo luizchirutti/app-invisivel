@@ -1,6 +1,6 @@
 name: app_invisivel
 description: "MVP de aplicação de segurança privada com foco em anonimato extremo e anti-rastreio."
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ">=3.2.0 <4.0.0"

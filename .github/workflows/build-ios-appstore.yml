@@ -1,0 +1,115 @@
+name: Build iOS for App Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_name:
+        description: Version shown in App Store Connect
+        required: true
+        default: 1.0.0
+      build_number:
+        description: Unique iOS build number
+        required: true
+        default: 1
+      publish_to_app_store_connect:
+        description: Upload the generated IPA to App Store Connect
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  ios:
+    name: Build signed iOS IPA
+    runs-on: macos-latest
+    env:
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+      APP_STORE_CONNECT_CERTIFICATE_KEY: ${{ secrets.APP_STORE_CONNECT_CERTIFICATE_KEY }}
+      APP_ACTIVATION_REQUIRED: ${{ secrets.APP_ACTIVATION_REQUIRED }}
+      APP_ACTIVATION_TOTP_SECRET: ${{ secrets.APP_ACTIVATION_TOTP_SECRET }}
+
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Validar secrets obrigatorios
+        run: |
+          test -n "$APP_STORE_CONNECT_ISSUER_ID"
+          test -n "$APP_STORE_CONNECT_KEY_IDENTIFIER"
+          test -n "$APP_STORE_CONNECT_PRIVATE_KEY"
+          test -n "$APP_STORE_CONNECT_CERTIFICATE_KEY"
+
+      - name: Instalar dependencias Dart
+        run: flutter pub get
+
+      - name: Instalar CocoaPods
+        run: pod install --project-directory=ios
+
+      - name: Instalar Codemagic CLI tools
+        run: pip3 install codemagic-cli-tools
+
+      - name: Preparar assinatura iOS
+        run: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$(xcode-project detect-bundle-id)" \
+            --platform IOS \
+            --type IOS_APP_STORE \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --private-key @env:APP_STORE_CONNECT_PRIVATE_KEY \
+            --certificate-key @env:APP_STORE_CONNECT_CERTIFICATE_KEY \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles --export-options-plist "$HOME/export_options.plist"
+
+      - name: Build IPA assinado
+        run: |
+          BUILD_ARGS=(
+            --release
+            --build-name=${{ inputs.build_name }}
+            --build-number=${{ inputs.build_number }}
+            --export-options-plist=$HOME/export_options.plist
+          )
+
+          if [ -n "$APP_ACTIVATION_REQUIRED" ]; then
+            BUILD_ARGS+=(--dart-define=APP_ACTIVATION_REQUIRED=$APP_ACTIVATION_REQUIRED)
+          fi
+
+          if [ -n "$APP_ACTIVATION_TOTP_SECRET" ]; then
+            BUILD_ARGS+=(--dart-define=APP_ACTIVATION_TOTP_SECRET=$APP_ACTIVATION_TOTP_SECRET)
+          fi
+
+          flutter build ipa "${BUILD_ARGS[@]}"
+
+      - name: Upload IPA como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-invisivel-ios-ipa
+          path: build/ios/ipa/*.ipa
+          retention-days: 7
+
+      - name: Enviar build para App Store Connect
+        if: ${{ inputs.publish_to_app_store_connect }}
+        run: |
+          app-store-connect publish \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --private-key @env:APP_STORE_CONNECT_PRIVATE_KEY \
+            --path "$(find "$PWD/build/ios/ipa" -name '*.ipa' -print -quit)"
+
+      - name: Restaurar keychain padrao
+        if: always()
+        run: keychain use-login
