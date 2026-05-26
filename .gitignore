@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local activation QR containing TOTP secret
+/assets/configs/authy_qr.png

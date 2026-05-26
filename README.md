@@ -1,5 +1,30 @@
 # App Invisível - MVP de Segurança Privada
 
+## Ativacao controlada na primeira execucao
+
+O app pode exigir liberacao na primeira abertura usando `--dart-define` no build.
+
+```bash
+flutter build ipa --release \
+  --dart-define=APP_ACTIVATION_REQUIRED=true \
+  --dart-define=APP_ACTIVATION_CODES=INV001,INV002,INV003
+```
+
+```bash
+flutter build ipa --release \
+  --dart-define=APP_ACTIVATION_REQUIRED=true \
+  --dart-define=APP_ACTIVATION_TOTP_SECRET=JBSWY3DPEHPK3PXP
+```
+
+Variaveis aceitas:
+
+- `APP_ACTIVATION_REQUIRED=true` para forcar a ativacao.
+- `APP_ACTIVATION_CODES=INV001,INV002` para aceitar codigos predefinidos.
+- `APP_ACTIVATION_TOTP_SECRET=...` para aceitar codigo temporario de app authenticator.
+- `APP_ACTIVATION_TOTP_PERIOD=30`, `APP_ACTIVATION_TOTP_DIGITS=6` e `APP_ACTIVATION_TOTP_WINDOW=1` para ajuste fino.
+
+Observacao importante: este controle e local ao app. Ele ajuda a bloquear o primeiro acesso, mas nao conta instalacoes nem impede compartilhamento de codigo. Para controle real de quantidade de instalacoes, revogacao e auditoria, o correto e validar a ativacao em backend.
+
 ## 📋 Visão Geral
 
 **App Invisível** é um MVP (Minimum Viable Product) de aplicativo de segurança privada desenvolvido em Flutter, focado em **anonimato extremo** e **anti-rastreio**. O projeto implementa uma arquitetura de segurança de classe empresarial com as melhores práticas de criptografia e privacidade.
