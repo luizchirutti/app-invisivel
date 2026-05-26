@@ -28,6 +28,11 @@ on:
         required: false
         default: true
         type: boolean
+      disable_activation_for_review:
+        description: Build iOS review version without first-run activation gate
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -158,12 +163,14 @@ jobs:
             --export-options-plist=$HOME/export_options.plist
           )
 
-          if [ -n "$APP_ACTIVATION_REQUIRED" ]; then
-            BUILD_ARGS+=(--dart-define=APP_ACTIVATION_REQUIRED=$APP_ACTIVATION_REQUIRED)
-          fi
+          if [ "${{ github.event.inputs.disable_activation_for_review || 'false' }}" != 'true' ]; then
+            if [ -n "$APP_ACTIVATION_REQUIRED" ]; then
+              BUILD_ARGS+=(--dart-define=APP_ACTIVATION_REQUIRED=$APP_ACTIVATION_REQUIRED)
+            fi
 
-          if [ -n "$APP_ACTIVATION_TOTP_SECRET" ]; then
-            BUILD_ARGS+=(--dart-define=APP_ACTIVATION_TOTP_SECRET=$APP_ACTIVATION_TOTP_SECRET)
+            if [ -n "$APP_ACTIVATION_TOTP_SECRET" ]; then
+              BUILD_ARGS+=(--dart-define=APP_ACTIVATION_TOTP_SECRET=$APP_ACTIVATION_TOTP_SECRET)
+            fi
           fi
 
           flutter build ipa "${BUILD_ARGS[@]}"
