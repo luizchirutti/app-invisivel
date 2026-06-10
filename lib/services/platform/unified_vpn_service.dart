@@ -37,12 +37,12 @@ class UnifiedVPNService {
       }
 
       _initialized = true;
-      debugPrint('[UnifiedVPN] Inicializado com sucesso');
+      debugPrint('[UnifiedProtection] Inicializado com sucesso');
 
       return const Right(null);
     } catch (e) {
-      debugPrint('[UnifiedVPN] Erro na inicialização: $e');
-      return Left(VPNConnectionFailure('Erro ao inicializar VPN: $e'));
+      debugPrint('[UnifiedProtection] Erro na inicializacao: $e');
+      return Left(VPNConnectionFailure('Erro ao inicializar conexao protegida: $e'));
     }
   }
 
@@ -59,7 +59,7 @@ class UnifiedVPNService {
     // No iOS com conta pessoal Apple o entitlement de VPN não é concedido.
     // Simulamos sucesso para que a proteção seja exibida como ativa.
     if (!kIsWeb && Platform.isIOS) {
-      debugPrint('[UnifiedVPN] iOS: simulando conexão bem-sucedida (sem entitlement)');
+      debugPrint('[UnifiedProtection] iOS: fluxo protegido em modo local sem integracao nativa.');
       return const Right(null);
     }
     try {
@@ -78,10 +78,10 @@ class UnifiedVPNService {
 
         final success = await _platformVPN!.startVPN(config);
         if (!success) {
-          return Left(VPNConnectionFailure('Falha ao conectar VPN nativa'));
+          return Left(VPNConnectionFailure('Falha ao conectar integracao nativa'));
         }
 
-        debugPrint('[UnifiedVPN] Conectado via implementação nativa');
+        debugPrint('[UnifiedProtection] Conectado via implementacao nativa');
       } else {
         // Usar fallback Dart (debug)
         final vpnConfig = VPNConfig(
@@ -97,12 +97,12 @@ class UnifiedVPNService {
         await _dartVPN.initializeVPN(vpnConfig);
         await _dartVPN.connectToVPN();
 
-        debugPrint('[UnifiedVPN] Conectado via implementação Dart');
+        debugPrint('[UnifiedProtection] Conectado via implementacao Dart');
       }
 
       return const Right(null);
     } catch (e) {
-      return Left(VPNConnectionFailure('Erro ao conectar VPN: $e'));
+      return Left(VPNConnectionFailure('Erro ao conectar protecao: $e'));
     }
   }
 
@@ -115,17 +115,17 @@ class UnifiedVPNService {
       if (_useNative) {
         final success = await _platformVPN!.stopVPN();
         if (!success) {
-          return Left(VPNConnectionFailure('Falha ao desconectar VPN nativa'));
+          return Left(VPNConnectionFailure('Falha ao desconectar integracao nativa'));
         }
-        debugPrint('[UnifiedVPN] Desconectado via implementação nativa');
+        debugPrint('[UnifiedProtection] Desconectado via implementacao nativa');
       } else {
         await _dartVPN.disconnectFromVPN();
-        debugPrint('[UnifiedVPN] Desconectado via implementação Dart');
+        debugPrint('[UnifiedProtection] Desconectado via implementacao Dart');
       }
 
       return const Right(null);
     } catch (e) {
-      return Left(VPNConnectionFailure('Erro ao desconectar VPN: $e'));
+      return Left(VPNConnectionFailure('Erro ao desconectar protecao: $e'));
     }
   }
 
@@ -160,14 +160,14 @@ class UnifiedVPNService {
       if (_useNative) {
         final success = await _platformVPN!.setKillSwitch(enabled);
         if (!success) {
-          return Left(VPNConnectionFailure('Falha ao configurar Kill Switch'));
+          return Left(VPNConnectionFailure('Falha ao configurar bloqueio preventivo'));
         }
       }
 
-      debugPrint('[UnifiedVPN] Kill Switch: ${enabled ? "ATIVO" : "INATIVO"}');
+      debugPrint('[UnifiedProtection] Bloqueio preventivo: ${enabled ? "ATIVO" : "INATIVO"}');
       return const Right(null);
     } catch (e) {
-      return Left(VPNConnectionFailure('Erro ao configurar Kill Switch: $e'));
+      return Left(VPNConnectionFailure('Erro ao configurar bloqueio preventivo: $e'));
     }
   }
 

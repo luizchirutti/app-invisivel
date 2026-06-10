@@ -140,8 +140,8 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
 
     await _alertService.upsertReminder(
       reasonKey: 'duress_triggered',
-      title: 'Modo de coacao acionado',
-      body: 'Reset de seguranca executado. Verifique a conta imediatamente.',
+      title: 'Modo alternativo acionado',
+      body: 'A rotina configurada foi executada. Revise o dispositivo assim que possivel.',
     );
 
     final factoryResetTriggered = await _duressService.performFactoryReset();
@@ -155,7 +155,7 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
     await _refreshGateState(forceLock: true);
     setState(() {
       _submitting = false;
-      _error = 'Reset local executado. Ative admin do dispositivo para reset completo.';
+      _error = 'Rotina local concluida. Ative o recurso avancado do dispositivo para uma acao completa.';
     });
   }
 
@@ -208,7 +208,7 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Modo Seguranca Ativo',
+                            'Verificacao adicional ativa',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -216,8 +216,8 @@ class _SecurityModeGateState extends State<SecurityModeGate> with WidgetsBinding
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Digite seu PIN seguro para acessar o app.\nSe o PIN de coacao for digitado, o reset de seguranca sera acionado.',
-                      style: TextStyle(fontSize: 13),
+                      'Digite seu PIN principal para acessar o app.\nSe o PIN alternativo for digitado, a rotina configurada sera executada.',
+                      style: TextStyle(fontSize: 14),
                     ),
                     const SizedBox(height: 14),
                     TextField(

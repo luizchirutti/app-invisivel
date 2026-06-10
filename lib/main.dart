@@ -88,7 +88,7 @@ Future<void> _setupSecurityServices() async {
 
   if (!integrityResult.isSecure) {
     await logger.warning(
-      'Ameaças de integridade detectadas: ${integrityResult.threatsSummary}',
+      'Observacoes de integridade registradas: ${integrityResult.threatsSummary}',
       'SecurityCheck',
     );
   }
@@ -98,7 +98,7 @@ Future<void> _setupSecurityServices() async {
     interval: const Duration(minutes: 5),
     onThreatDetected: (result) async {
       await logger.critical(
-        'Ameaça detectada: ${result.threatsSummary}',
+        'Observacao de integridade detectada: ${result.threatsSummary}',
         'ThreatDetection',
       );
     },

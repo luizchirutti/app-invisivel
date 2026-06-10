@@ -131,10 +131,10 @@ class ProtectionStatusCard extends StatelessWidget {
   }
 
   String _getRiskLabel() {
-    if (riskLevel == 0) return '✅ Seguro';
-    if (riskLevel < 50) return '⚠️ Aviso';
-    if (riskLevel < 75) return '⚠️ Risco';
-    return '🚨 Crítico';
+    if (riskLevel == 0) return 'Estavel';
+    if (riskLevel < 50) return 'Observacao';
+    if (riskLevel < 75) return 'Atencao';
+    return 'Revisar';
   }
 
   @override
@@ -173,7 +173,7 @@ class ProtectionStatusCard extends StatelessWidget {
                     style: TextStyle(
                       color: _getRiskColor(),
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontSize: 13,
                     ),
                   ),
                 ),
@@ -182,9 +182,9 @@ class ProtectionStatusCard extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Indicadores
-            _buildIndicator('VPN', isVPNActive),
+            _buildIndicator('Conexao protegida', isVPNActive),
             const SizedBox(height: 8),
-            _buildIndicator('Kill Switch', isKillSwitchActive),
+            _buildIndicator('Bloqueio preventivo', isKillSwitchActive),
             const SizedBox(height: 8),
             _buildIndicator('DNS Seguro (DoH)', dohEnabled),
             const SizedBox(height: 8),
@@ -193,7 +193,7 @@ class ProtectionStatusCard extends StatelessWidget {
             if (threatsSummary.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text(
-                'Ameaças Detectadas:',
+                'Observações atuais:',
                 style: TextStyle(
                   color: Colors.red[700],
                   fontWeight: FontWeight.bold,
@@ -202,7 +202,7 @@ class ProtectionStatusCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 threatsSummary,
-                style: const TextStyle(fontSize: 12),
+                style: const TextStyle(fontSize: 13),
               ),
             ],
           ],
@@ -261,7 +261,7 @@ class ConnectionLogWidget extends StatelessWidget {
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 12,
+              fontSize: 14,
             ),
           ),
           const SizedBox(height: 8),
@@ -275,7 +275,7 @@ class ConnectionLogWidget extends StatelessWidget {
                 ? const Center(
                     child: Text(
                       'Aguardando conexões...',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                   )
                 : ListView.separated(
@@ -292,7 +292,7 @@ class ConnectionLogWidget extends StatelessWidget {
                           entry,
                           style: const TextStyle(
                             color: Colors.green,
-                            fontSize: 10,
+                            fontSize: 13,
                             fontFamily: 'monospace',
                           ),
                           maxLines: 2,

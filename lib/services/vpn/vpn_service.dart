@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/constants/security_constants.dart';
@@ -63,7 +62,6 @@ class VPNService {
 
   VPNService._internal();
 
-  late VPNConfig _config;
   VPNConnectionState _currentState = VPNConnectionState.disconnected;
   final _stateController = StreamController<VPNEvent>.broadcast();
   final _connectivity = Connectivity();
@@ -80,8 +78,6 @@ class VPNService {
   /// Inicializa o serviço VPN com configuração
   Future<Either<Failure, void>> initializeVPN(VPNConfig config) async {
     try {
-      _config = config;
-
       // Verificar conectividade de rede
       final connectivity = await _connectivity.checkConnectivity();
       if (connectivity == ConnectivityResult.none) {
@@ -100,7 +96,7 @@ class VPNService {
   /// Conecta à VPN
   Future<Either<Failure, void>> connectToVPN() async {
     try {
-      _updateState(VPNConnectionState.connecting, 'Conectando à VPN...');
+      _updateState(VPNConnectionState.connecting, 'Conectando protecao...');
 
       // Ativar Kill Switch ANTES de conectar
       await _activateKillSwitch();
@@ -113,21 +109,21 @@ class VPNService {
 
       _updateState(
         VPNConnectionState.connected,
-        'VPN conectada com sucesso via ${SecurityConstants.VPN_PROTOCOL}',
+        'Protecao conectada com sucesso via ${SecurityConstants.VPN_PROTOCOL}',
       );
 
-      debugPrint('[VPN] Conexão estabelecida');
+      debugPrint('[Protection] Conexao estabelecida');
       return const Right(null);
     } catch (e) {
-      _updateState(VPNConnectionState.error, 'Erro de conexão: $e');
-      return Left(VPNConnectionFailure('Falha ao conectar VPN: $e'));
+      _updateState(VPNConnectionState.error, 'Erro de conexao: $e');
+      return Left(VPNConnectionFailure('Falha ao conectar protecao: $e'));
     }
   }
 
   /// Desconecta da VPN
   Future<Either<Failure, void>> disconnectFromVPN() async {
     try {
-      _updateState(VPNConnectionState.disconnecting, 'Desconectando VPN...');
+      _updateState(VPNConnectionState.disconnecting, 'Desconectando protecao...');
 
       // Parar monitoramento de Kill Switch
       _stopKillSwitchMonitoring();
@@ -139,9 +135,9 @@ class VPNService {
       // Desativar Kill Switch
       await _deactivateKillSwitch();
 
-      _updateState(VPNConnectionState.disconnected, 'VPN desconectada');
+      _updateState(VPNConnectionState.disconnected, 'Protecao desconectada');
 
-      debugPrint('[VPN] Desconectada com sucesso');
+      debugPrint('[Protection] Desconectada com sucesso');
       return const Right(null);
     } catch (e) {
       return Left(VPNConnectionFailure('Erro ao desconectar: $e'));
@@ -158,7 +154,7 @@ class VPNService {
       debugPrint('[KillSwitch] Ativado');
     } catch (e) {
       debugPrint('[KillSwitch] Erro ao ativar: $e');
-      throw VPNConnectionFailure('Falha ao ativar Kill Switch: $e');
+      throw VPNConnectionFailure('Falha ao ativar bloqueio preventivo: $e');
     }
   }
 
@@ -213,10 +209,10 @@ class VPNService {
   Future<void> _triggerKillSwitch() async {
     _updateState(
       VPNConnectionState.error,
-      '🚨 KILL SWITCH ATIVADO: Interface VPN caiu! Tráfego bloqueado.',
+      'Bloqueio preventivo ativado: conexao protegida interrompida.',
     );
 
-    debugPrint('[KillSwitch] ATIVADO - Interface VPN detectada como inativa!');
+    debugPrint('[Protection] Bloqueio preventivo ativado por inatividade da conexao protegida.');
 
     // Notificar usuário
     // TODO: Mostrar notificação critical

@@ -47,7 +47,7 @@ class ProtectionRepositoryImpl implements ProtectionRepository {
 
       if (connectResult.isLeft()) {
         final connectFailure = connectResult.swap().getOrElse(
-          () => VPNConnectionFailure('Falha ao conectar VPN'),
+          () => VPNConnectionFailure('Falha ao iniciar conexao protegida'),
         );
 
         if (!_shouldFallbackToShieldMode(connectFailure)) {
@@ -74,7 +74,7 @@ class ProtectionRepositoryImpl implements ProtectionRepository {
         final ksResult = await vpnService.setKillSwitch(true);
         if (ksResult.isLeft()) {
           final ksFailure = ksResult.swap().getOrElse(
-            () => VPNConnectionFailure('Falha ao ativar Kill Switch'),
+            () => VPNConnectionFailure('Falha ao ativar bloqueio preventivo'),
           );
 
           if (!_shouldFallbackToShieldMode(ksFailure)) {
@@ -138,7 +138,7 @@ class ProtectionRepositoryImpl implements ProtectionRepository {
 
       if (vpnStatusResult.isLeft()) {
         final statusFailure = vpnStatusResult.swap().getOrElse(
-          () => AppFailure('Falha ao obter status da VPN'),
+          () => AppFailure('Falha ao obter status da conexao protegida'),
         );
 
         if (!_shouldFallbackToShieldMode(statusFailure)) {

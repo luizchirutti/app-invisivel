@@ -131,7 +131,7 @@ class DeviceIntegrityService {
     }
 
     // Verificar build tags suspeitas
-    if ((info.tags ?? '').contains('test-keys')) {
+    if (info.tags.contains('test-keys')) {
       return true;
     }
 
@@ -177,7 +177,6 @@ class DeviceIntegrityService {
   Future<bool> _checkMockLocation() async {
     try {
       if (defaultTargetPlatform == TargetPlatform.android) {
-        final androidInfo = await _deviceInfo.androidInfo;
         // Em Android, existem flags de desenvolvimento que indicam mock location
         // Seria necessário usar platform channel para verificar
         return false;
@@ -197,8 +196,8 @@ class DeviceIntegrityService {
         final androidInfo = await _deviceInfo.androidInfo;
 
         // Verificar versão Android
-        if ((androidInfo.version.sdkInt ?? 0) < 26) {
-          threats.add('⚠️ VERSÃO DESATUALIZADA: Android SDK < 26 detectado');
+        if (androidInfo.version.sdkInt < 26) {
+          threats.add('⚠️ VERSAO DESATUALIZADA: sistema operacional abaixo do nivel minimo recomendado');
         }
       } else if (defaultTargetPlatform == TargetPlatform.iOS) {
         final iosInfo = await _deviceInfo.iosInfo;

@@ -82,11 +82,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
   bool _fullScreenIntentPermissionGranted = true;
   bool _accessibilityServiceEnabled = true;
   SecurityScanResult? _lastScan;
-  List<String> _customBlocklistPackages = [
-    'com.flexispy.android',
-    'com.mspy.android',
-    'com.cerberus',
-  ];
+  List<String> _customBlocklistPackages = [];
   List<String> _customAllowlistPackages = [];
 
   int _coverageScore(ProtectionStatus status) {
@@ -145,11 +141,11 @@ class _ProtectionPageState extends State<ProtectionPage> {
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: color,
-                    fontSize: 12,
+                    fontSize: 14,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(details, style: const TextStyle(fontSize: 11)),
+                Text(details, style: const TextStyle(fontSize: 13)),
               ],
             ),
           ),
@@ -170,7 +166,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Seu nivel de protecao agora',
+              'Resumo atual de privacidade e conectividade',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
@@ -201,40 +197,40 @@ class _ProtectionPageState extends State<ProtectionPage> {
               ],
             ),
             const SizedBox(height: 8),
-            Text(_confidenceMessage(status), style: const TextStyle(fontSize: 12)),
+            Text(_confidenceMessage(status), style: const TextStyle(fontSize: 14)),
             const SizedBox(height: 14),
             const Text(
-              'Voce esta protegido contra',
+              'Recursos atualmente ativos',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             const SizedBox(height: 8),
             _buildProtectionAgainstItem(
-              risk: 'Vazamento de DNS',
+              risk: 'Consultas DNS com protecao adicional',
               protected: status.dohEnabled,
               details: status.dohEnabled
-                  ? 'DoH ligado para reduzir exposicao das consultas de dominio.'
-                  : 'Ative DoH para criptografar consultas DNS.',
+                  ? 'As consultas DNS usam um canal protegido dentro do app.'
+                  : 'Ative DoH para ampliar a privacidade das consultas DNS.',
             ),
             _buildProtectionAgainstItem(
-              risk: 'Exposicao de identidade digital',
+              risk: 'Reducao de rastreamento entre sessoes',
               protected: status.antiFingerprinting,
               details: status.antiFingerprinting
-                  ? 'Headers e metadados sao mascarados para reduzir rastreio.'
-                  : 'Ative anti-fingerprinting para reduzir correlacao de sessao.',
+                  ? 'Cabecalhos e metadados do app sao ajustados para reduzir correlacao.'
+                  : 'Ative anti-fingerprinting para reduzir sinais de identificacao.',
             ),
             _buildProtectionAgainstItem(
-              risk: 'Queda de tunel com vazamento de trafego',
+              risk: 'Conexao protegida em caso de instabilidade',
               protected: status.isKillSwitchActive,
               details: status.isKillSwitchActive
-                  ? 'Kill Switch habilitado para bloquear trafego em caso de queda.'
-                  : 'Ative Kill Switch para evitar vazamento em desconexao.',
+                  ? 'O app restringe o trafego quando a conexao protegida cai.'
+                  : 'Ative o bloqueio preventivo para limitar trafego durante desconexoes.',
             ),
             _buildProtectionAgainstItem(
-              risk: 'Risco de ambiente comprometido',
+              risk: 'Verificacoes locais do dispositivo',
               protected: status.threatDetectionActive,
               details: status.threatDetectionActive
-                  ? 'Monitoramento de integridade ativo com analise de ameaças.'
-                  : 'Ative deteccao continua para alertas de integridade.',
+                  ? 'As verificacoes locais de integridade estao ativas para sinais basicos do dispositivo.'
+                  : 'Ative as verificacoes locais para acompanhar sinais basicos do dispositivo.',
             ),
           ],
         ),
@@ -276,8 +272,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 Expanded(
                   child: Text(
                     isCertified
-                        ? 'Certificado de Sessao Segura: 100% protegido'
-                        : 'Certificado de Sessao: cobertura parcial',
+                        ? 'Resumo da sessao: recursos principais ativos'
+                        : 'Resumo da sessao: cobertura parcial',
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -286,19 +282,19 @@ class _ProtectionPageState extends State<ProtectionPage> {
             const SizedBox(height: 8),
             Text(
               isCertified
-                  ? 'Seu dispositivo e sessao passaram na varredura e todas as camadas criticas estao ativas.'
-                  : 'Execute varredura e ative protecao total para elevar o certificado a 100% seguro.',
-              style: const TextStyle(fontSize: 12),
+                  ? 'Os principais recursos do app estao ativos nesta sessao.'
+                  : 'Ative os recursos disponiveis para ampliar a cobertura desta sessao.',
+              style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 8),
             Text(
               'ID do certificado: $certificateId',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             Text(
               'Emitido em: ${DateTime.now().toLocal()}',
-              style: const TextStyle(fontSize: 11),
+              style: const TextStyle(fontSize: 13),
             ),
           ],
         ),
@@ -396,7 +392,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
         );
         if (customHits.isNotEmpty) {
           findings.add(
-            'Lista negra personalizada acionada: ${customHits.join(', ')}',
+            'Lista de observacao personalizada acionada: ${customHits.join(', ')}',
           );
         }
       }
@@ -408,11 +404,11 @@ class _ProtectionPageState extends State<ProtectionPage> {
           hasPhoneTapRisk = micStatus.isGranted || phoneStatus.isGranted;
           if (hasPhoneTapRisk) {
             findings.add(
-              'Risco de escuta telefonica: permissoes sensiveis de audio/telefone ativas.',
+              'Permissoes sensiveis de audio/telefone estao ativas e merecem revisao.',
             );
           }
         } catch (_) {
-          findings.add('Nao foi possivel validar permissao de audio/telefone.');
+          findings.add('Nao foi possivel revisar permissoes de audio/telefone nesta verificacao.');
         }
       }
 
@@ -438,10 +434,10 @@ class _ProtectionPageState extends State<ProtectionPage> {
         if (result.hasCriticalRisk) {
           await _alertService.upsertReminder(
             reasonKey: 'suspicious_activity',
-            title: 'Atividade suspeita detectada',
+            title: 'Observacao local registrada',
             body: result.findings.isNotEmpty
                 ? result.findings.first
-                : 'Foram detectados riscos no dispositivo.',
+                : 'Foram encontradas observacoes que merecem revisao neste dispositivo.',
           );
         } else {
           _alertService.clearReminder('suspicious_activity');
@@ -450,8 +446,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
         if (!silent) {
           _addLogEntry(
             result.hasCriticalRisk
-                ? '⚠️ Varredura detectou riscos - score ${result.safetyScore}%'
-                : '✅ Varredura concluida - dispositivo seguro (${result.safetyScore}%)',
+                ? '⚠️ Varredura encontrou pontos de atencao - cobertura ${result.safetyScore}%'
+                : '✅ Varredura concluida - cobertura atual ${result.safetyScore}%',
           );
         }
       }
@@ -471,7 +467,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         await _vpnChannel.invokeMapMethod<String, dynamic>('triggerEmergencyBlock');
       }
-      _addLogEntry('🚨 Bloqueio automatico ativado por risco critico detectado.');
+      _addLogEntry('⚠️ Resposta automatica ativada apos verificacao local.');
     } catch (_) {
       _addLogEntry('⚠️ Falha ao acionar bloqueio nativo de emergencia.');
     }
@@ -486,11 +482,11 @@ class _ProtectionPageState extends State<ProtectionPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Riscos detectados na varredura'),
+          title: const Text('Pontos de atencao encontrados'),
           content: Text(
-            'Foram encontrados sinais de risco no dispositivo.\n'
-            'Score atual: ${result.safetyScore}%\n\n'
-            'Deseja ativar a protecao total mesmo assim?',
+            'A verificacao encontrou sinais que merecem revisao.\n'
+            'Cobertura atual: ${result.safetyScore}%\n\n'
+            'Deseja continuar com a ativacao mesmo assim?',
           ),
           actions: [
             TextButton(
@@ -499,7 +495,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Ativar mesmo assim'),
+              child: const Text('Continuar ativacao'),
             ),
           ],
         );
@@ -524,15 +520,15 @@ class _ProtectionPageState extends State<ProtectionPage> {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: 13),
             ),
           ),
           Text(
-            ok ? 'OK' : 'RISCO',
+            ok ? 'OK' : 'REVISAR',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: ok ? Colors.green : Colors.orange,
-              fontSize: 11,
+              fontSize: 13,
             ),
           ),
         ],
@@ -594,8 +590,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
       });
       _addLogEntry(
         isBlocklist
-            ? '⚙️ Lista negra atualizada (${result.length} itens).'
-            : '⚙️ Lista branca atualizada (${result.length} itens).',
+        ? '⚙️ Lista de observacao atualizada (${result.length} itens).'
+        : '⚙️ Lista prioritaria atualizada (${result.length} itens).',
       );
     }
   }
@@ -604,7 +600,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
     if (values.isEmpty) {
       return const Text(
         'Nenhum item configurado',
-        style: TextStyle(fontSize: 11),
+        style: TextStyle(fontSize: 13),
       );
     }
 
@@ -619,7 +615,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 color: color,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(item, style: const TextStyle(fontSize: 10)),
+              child: Text(item, style: const TextStyle(fontSize: 13)),
             ),
           )
           .toList(),
@@ -636,13 +632,13 @@ class _ProtectionPageState extends State<ProtectionPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Varredura Inteligente do Dispositivo',
+              'Verificacoes locais do dispositivo',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
-              'Execute a varredura para validar risco antes da ativacao total da protecao.',
-              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+              'Execute a verificacao para revisar o estado atual do app antes de ativar todos os recursos.',
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
             ),
             const SizedBox(height: 12),
             Row(
@@ -657,7 +653,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.security),
-                    label: Text(_isScanning ? 'Varrendo...' : 'Fazer varredura agora'),
+                    label: Text(_isScanning ? 'Analisando...' : 'Revisar agora'),
                   ),
                 ),
               ],
@@ -667,8 +663,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
               dense: true,
               contentPadding: EdgeInsets.zero,
               title: const Text(
-                'Executar varredura antes da ativacao total',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                'Executar revisao antes da ativacao',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               value: _runScanBeforeActivation,
               onChanged: (value) {
@@ -681,12 +677,12 @@ class _ProtectionPageState extends State<ProtectionPage> {
               dense: true,
               contentPadding: EdgeInsets.zero,
               title: const Text(
-                'Bloqueio reforcado contra escuta telefonica',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                'Reforcar monitoramento de permissoes sensiveis',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               subtitle: const Text(
-                'Aciona bloqueio agressivo quando a protecao total esta ativa.',
-                style: TextStyle(fontSize: 11),
+                'Aplica uma resposta mais restritiva quando todos os recursos estao ativos.',
+                style: TextStyle(fontSize: 13),
               ),
               value: _phoneTapShieldEnabled,
               onChanged: (value) {
@@ -699,12 +695,12 @@ class _ProtectionPageState extends State<ProtectionPage> {
               dense: true,
               contentPadding: EdgeInsets.zero,
               title: const Text(
-                'Bloqueio automatico quando risco for critico',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                'Resposta automatica para sinais relevantes',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               subtitle: const Text(
-                'Se detectar risco critico, bloqueia automaticamente e impede ativacao.',
-                style: TextStyle(fontSize: 11),
+                'Quando a verificacao encontra sinais relevantes, o app limita a ativacao automaticamente.',
+                style: TextStyle(fontSize: 13),
               ),
               value: _autoBlockOnCriticalRisk,
               onChanged: (value) {
@@ -715,8 +711,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Deteccao personalizada de apps suspeitos',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              'Listas personalizadas de revisao',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
             const SizedBox(height: 8),
             Row(
@@ -724,37 +720,37 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _editPackageList(
-                      title: 'Editar lista negra (apps suspeitos)',
+                      title: 'Editar lista de observacao',
                       isBlocklist: true,
                     ),
                     icon: const Icon(Icons.block),
-                    label: const Text('Editar lista negra'),
+                    label: const Text('Lista de observacao'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _editPackageList(
-                      title: 'Editar lista branca (apps permitidos)',
+                      title: 'Editar lista prioritaria',
                       isBlocklist: false,
                     ),
                     icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Editar lista branca'),
+                    label: const Text('Lista prioritaria'),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             const Text(
-              'Lista negra ativa:',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              'Lista de observacao ativa:',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             _buildPackageListChips(_customBlocklistPackages, Colors.red.shade100),
             const SizedBox(height: 8),
             const Text(
-              'Lista branca ativa:',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              'Lista prioritaria ativa:',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             _buildPackageListChips(_customAllowlistPackages, Colors.green.shade100),
@@ -765,10 +761,10 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 children: [
                   const Text(
                     'Resultado da ultima varredura',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                   Text(
-                    '${_lastScan!.safetyScore}% seguro',
+                    '${_lastScan!.safetyScore}% de cobertura estimada',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: _lastScan!.safetyScore >= 80 ? Colors.green : Colors.orange,
@@ -778,27 +774,27 @@ class _ProtectionPageState extends State<ProtectionPage> {
               ),
               const SizedBox(height: 8),
               _buildScanResultRow(
-                'Verificar apps nao seguros',
+                'Revisar apps monitorados',
                 _lastScan!.hasUnsafeApps,
               ),
               _buildScanResultRow(
-                'Verificar sinais de malware',
+                'Revisar sinais locais de integridade',
                 _lastScan!.hasMalware,
               ),
               _buildScanResultRow(
-                'Verificar rastreio e interceptacao',
+                'Revisar rastreamento e interceptacao',
                 _lastScan!.hasTracking,
               ),
               _buildScanResultRow(
-                'Verificar monitoramento ativo suspeito',
+                'Revisar monitoramento ativo',
                 _lastScan!.hasActiveMonitoring,
               ),
               _buildScanResultRow(
-                'Verificar risco de escuta telefonica',
+                'Revisar permissoes de audio e telefone',
                 _lastScan!.hasPhoneTapRisk,
               ),
               _buildScanResultRow(
-                'Bloqueio anti-escuta em modo reforcado',
+                'Resposta reforcada para permissoes sensiveis',
                 !_lastScan!.phoneTapBlockingEnabled,
               ),
               if (_lastScan!.findings.isNotEmpty) ...[
@@ -813,7 +809,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                   ),
                   child: Text(
                     _lastScan!.findings.join('\n'),
-                    style: const TextStyle(fontSize: 11),
+                    style: const TextStyle(fontSize: 13),
                   ),
                 ),
               ],
@@ -872,11 +868,11 @@ class _ProtectionPageState extends State<ProtectionPage> {
         await showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Permissão de Acessibilidade'),
+            title: const Text('Permissao adicional do sistema'),
             content: const Text(
-              'Para bloquear outros apps até o PIN ser digitado, ative o serviço '
-              '"Modo Segurança" em Configurações → Acessibilidade.\n\n'
-              'Ele NÃO lê conteúdo de tela nem envia dados. Apenas detecta troca de app.',
+              'Para reforcar o bloqueio local ate o PIN ser digitado, ative o recurso '
+              'adicional do sistema nas configuracoes do dispositivo.\n\n'
+              'Ele nao le conteudo de tela nem envia dados. Apenas detecta troca de app.',
             ),
             actions: [
               TextButton(
@@ -923,7 +919,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
     if (matchesDuress) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('PIN seguro nao pode ser igual ao PIN de coacao.')),
+        const SnackBar(content: Text('O PIN principal nao pode ser igual ao PIN alternativo.')),
       );
       return;
     }
@@ -948,7 +944,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
     if (enabled && (!_isDuressPinConfigured || !_isUnlockPinConfigured)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Configure o PIN seguro e o PIN de coacao antes de ativar o modo seguranca.'),
+          content: Text('Configure o PIN principal e o PIN alternativo antes de ativar a verificacao adicional.'),
         ),
       );
       return;
@@ -961,7 +957,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Permissoes criticas ausentes. Libere notificacoes e Full Screen Intent para forcar retorno imediato.',
+              'Permissoes importantes ausentes. Libere notificacoes e abertura imediata para retorno rapido ao app.',
             ),
           ),
         );
@@ -972,15 +968,15 @@ class _ProtectionPageState extends State<ProtectionPage> {
     await _duressSecurityService.setSafetyModeEnabled(enabled);
     await _loadDuressPinStatus();
     _addLogEntry(enabled
-        ? '🛡️ Modo seguranca ativado. O app exigira PIN ao abrir/retomar.'
-        : 'ℹ️ Modo seguranca desativado.');
+        ? '🛡️ Verificacao adicional ativada. O app exigira PIN ao abrir ou retomar.'
+        : 'ℹ️ Verificacao adicional desativada.');
   }
 
   Future<void> _configureDuressPin() async {
     final pin = await _showPinDialog(
-      title: 'Configurar senha de coacao',
-      pinLabel: 'PIN de coacao (4-8 digitos)',
-      confirmLabel: 'Confirmar PIN de coacao',
+      title: 'Configurar PIN alternativo',
+      pinLabel: 'PIN alternativo (4-8 digitos)',
+      confirmLabel: 'Confirmar PIN alternativo',
     );
 
     if (pin == null) return;
@@ -989,7 +985,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
     if (matchesUnlock) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('PIN de coacao nao pode ser igual ao PIN seguro.')),
+        const SnackBar(content: Text('O PIN alternativo nao pode ser igual ao PIN principal.')),
       );
       return;
     }
@@ -997,15 +993,15 @@ class _ProtectionPageState extends State<ProtectionPage> {
     try {
       await _duressSecurityService.saveDuressPin(pin);
       await _loadDuressPinStatus();
-      _addLogEntry('🛡️ Senha de coacao configurada com sucesso.');
+      _addLogEntry('🛡️ PIN alternativo configurado com sucesso.');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('PIN de coacao salvo com sucesso.')),
+        const SnackBar(content: Text('PIN alternativo salvo com sucesso.')),
       );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Falha ao salvar PIN de coacao. Tente novamente.')),
+        const SnackBar(content: Text('Falha ao salvar o PIN alternativo. Tente novamente.')),
       );
     }
   }
@@ -1109,7 +1105,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
     await _duressSecurityService.setSafetyModeEnabled(false);
     await _duressSecurityService.disableDuressPin();
     await _loadDuressPinStatus();
-    _addLogEntry('ℹ️ Senha de coacao desativada e modo seguranca desligado.');
+    _addLogEntry('ℹ️ PIN alternativo desativado e verificacao adicional desligada.');
   }
 
   Future<void> _handleUnlockAttempt() async {
@@ -1130,8 +1126,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
     }
     await _alertService.upsertReminder(
       reasonKey: 'duress_triggered',
-      title: 'Modo de coacao acionado',
-      body: 'Reset de seguranca executado. Verifique a conta imediatamente.',
+      title: 'Modo alternativo acionado',
+      body: 'A rotina configurada foi executada. Revise o dispositivo assim que possivel.',
     );
 
     // Tentar reset de fábrica via Device Admin
@@ -1146,10 +1142,10 @@ class _ProtectionPageState extends State<ProtectionPage> {
     await _duressSecurityService.executeLocalSecurityReset();
 
     if (!mounted) return;
-    _addLogEntry('🚨 Senha de coacao acionada: reset local executado (Device Admin inativo).');
+    _addLogEntry('🚨 PIN alternativo acionado: rotina local concluida (recurso avancado inativo).');
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Operacao de seguranca executada. Ative o admin do dispositivo para reset completo.'),
+        content: Text('Rotina local concluida. Ative o recurso avancado do dispositivo para uma acao completa.'),
       ),
     );
     await _loadDuressPinStatus();
@@ -1165,13 +1161,13 @@ class _ProtectionPageState extends State<ProtectionPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Modo seguranca (2 senhas)',
+              'Verificacao adicional (2 PINs)',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'Quando ativo, o app cria uma segunda tela de bloqueio ao abrir/retomar. Use PIN seguro para acesso normal e PIN de coacao para reset de seguranca.',
-              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+              'Quando ativo, o app mostra uma validacao extra ao abrir ou retomar. Use o PIN principal para acesso normal e o PIN alternativo para executar a rotina configurada.',
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
             ),
             const SizedBox(height: 12),
 
@@ -1197,7 +1193,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                           ? 'Permissoes de resposta imediata: OK'
                           : 'Permissoes criticas pendentes para resposta imediata',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: (_notificationPermissionGranted && _fullScreenIntentPermissionGranted)
                             ? Colors.green[900]
@@ -1206,9 +1202,9 @@ class _ProtectionPageState extends State<ProtectionPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Notificacoes: ${_notificationPermissionGranted ? 'liberado' : 'bloqueado'} | Full Screen Intent: ${_fullScreenIntentPermissionGranted ? 'liberado' : 'bloqueado'}',
+                      'Notificacoes: ${_notificationPermissionGranted ? 'liberado' : 'bloqueado'} | Abertura imediata: ${_fullScreenIntentPermissionGranted ? 'liberado' : 'bloqueado'}',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: (_notificationPermissionGranted && _fullScreenIntentPermissionGranted)
                             ? Colors.green[800]
                             : Colors.red[800],
@@ -1227,7 +1223,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                       await _loadDuressPinStatus();
                     },
                     icon: const Icon(Icons.open_in_new),
-                    label: const Text('Liberar Full Screen Intent'),
+                    label: const Text('Liberar abertura imediata'),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700]),
                   ),
                 ),
@@ -1254,7 +1250,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                           ? '🔒 Bloqueio de outros apps: ATIVO'
                           : '⚠️ Bloqueio de outros apps: INATIVO',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: _accessibilityServiceEnabled ? Colors.green[900] : Colors.orange[900],
                       ),
@@ -1262,10 +1258,10 @@ class _ProtectionPageState extends State<ProtectionPage> {
                     const SizedBox(height: 4),
                     Text(
                       _accessibilityServiceEnabled
-                          ? 'O serviço de acessibilidade está ativo. Nenhum outro app abrirá com desbloqueio pendente.'
-                          : 'Sem o serviço de acessibilidade, outros apps podem abrir. Ative para bloqueio total.',
+                          ? 'O reforco de bloqueio local esta ativo. Nenhum outro app abrira com desbloqueio pendente.'
+                          : 'Sem esse reforco, outros apps podem abrir. Ative para ampliar o bloqueio local.',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 13,
                         color: _accessibilityServiceEnabled ? Colors.green[800] : Colors.orange[800],
                       ),
                     ),
@@ -1281,12 +1277,12 @@ class _ProtectionPageState extends State<ProtectionPage> {
                       await showDialog(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: const Text('Bloqueio total de outros apps'),
+                          title: const Text('Reforco de bloqueio local'),
                           content: const Text(
-                            'Ao ativar, o serviço "Modo Segurança" em Acessibilidade detecta '
-                            'quando outro app ou Configurações entra em foco e imediatamente '
+                            'Ao ativar, o recurso adicional do sistema detecta '
+                            'quando outro app ou Configuracoes entra em foco e imediatamente '
                             'retorna para a tela de PIN.\n\n'
-                            'Ele NÃO lê conteúdo de tela e NÃO envia dados.',
+                            'Ele nao le conteudo de tela e nao envia dados.',
                           ),
                           actions: [
                             TextButton(
@@ -1299,7 +1295,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                                 await _duressSecurityService.openAccessibilitySettings();
                                 await _loadDuressPinStatus();
                               },
-                              child: const Text('Abrir Acessibilidade'),
+                              child: const Text('Abrir configuracoes'),
                             ),
                           ],
                         ),
@@ -1316,12 +1312,12 @@ class _ProtectionPageState extends State<ProtectionPage> {
 
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Ativar modo seguranca'),
+              title: const Text('Ativar verificacao adicional'),
               subtitle: Text(
                 _isSafetyModeEnabled
                     ? 'Ligado: o app exige PIN ao abrir e voltar do segundo plano.'
                     : 'Desligado: o app nao exige PIN de bloqueio proprio.',
-                style: const TextStyle(fontSize: 12),
+                style: const TextStyle(fontSize: 13),
               ),
               value: _isSafetyModeEnabled,
               onChanged: _toggleSafetyMode,
@@ -1368,10 +1364,10 @@ class _ProtectionPageState extends State<ProtectionPage> {
                     Expanded(
                       child: Text(
                         _isDeviceAdminActive
-                            ? 'Administrador do dispositivo: ATIVO — reset de fabrica habilitado'
-                            : 'Administrador do dispositivo: INATIVO — ative para reset de fabrica',
+                            ? 'Recurso avancado do dispositivo: ativo para acoes adicionais de seguranca'
+                            : 'Recurso avancado do dispositivo: inativo',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 13,
                           color: _isDeviceAdminActive ? Colors.green[800] : Colors.orange[800],
                         ),
                       ),
@@ -1390,13 +1386,12 @@ class _ProtectionPageState extends State<ProtectionPage> {
                       await _loadDuressPinStatus();
                     },
                     icon: const Icon(Icons.admin_panel_settings),
-                    label: const Text('Ativar admin do dispositivo'),
+                    label: const Text('Ativar recurso avancado'),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[700]),
                   ),
                 ),
               ],
             ] else ...[
-              // iOS não possui Device Admin; mostrar limitação explicitamente.
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
@@ -1411,9 +1406,9 @@ class _ProtectionPageState extends State<ProtectionPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'No iOS, o sistema não oferece "Admin do dispositivo" nem permite abrir este app automaticamente ao desbloquear.',
+                        'Alguns recursos avancados dependem de capacidades do sistema operacional e podem nao estar disponiveis neste dispositivo.',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 13,
                           color: Colors.blue[800],
                         ),
                       ),
@@ -1432,8 +1427,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
                     icon: const Icon(Icons.password),
                     label: Text(
                       _isDuressPinConfigured
-                          ? 'Atualizar PIN de coacao'
-                          : 'Configurar PIN de coacao',
+                          ? 'Atualizar PIN alternativo'
+                          : 'Configurar PIN alternativo',
                     ),
                   ),
                 ),
@@ -1446,7 +1441,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                   TextButton.icon(
                     onPressed: _disableDuressPin,
                     icon: const Icon(Icons.delete_forever),
-                    label: const Text('Desativar PIN de coacao'),
+                    label: const Text('Desativar PIN alternativo'),
                   ),
                 ],
               ),
@@ -1456,9 +1451,9 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 keyboardType: TextInputType.number,
                 obscureText: true,
                 decoration: const InputDecoration(
-                  labelText: 'Digite o PIN de coacao aqui',
+                  labelText: 'Digite o PIN alternativo aqui',
                   border: OutlineInputBorder(),
-                  helperText: 'Ao confirmar, o app tenta reset de fabrica (Android admin) e usa reset local como fallback.',
+                  helperText: 'Ao confirmar, o app executa a rotina configurada para este dispositivo.',
                 ),
               ),
               const SizedBox(height: 8),
@@ -1519,7 +1514,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 style: TextStyle(
                   color: color,
                   fontWeight: FontWeight.bold,
-                  fontSize: 11,
+                  fontSize: 13,
                 ),
               ),
             ],
@@ -1527,12 +1522,12 @@ class _ProtectionPageState extends State<ProtectionPage> {
           const SizedBox(height: 8),
           Text(
             'Protege: $whatItProtects',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(
             'No painel Web: $webBehavior',
-            style: const TextStyle(fontSize: 12),
+            style: const TextStyle(fontSize: 14),
           ),
         ],
       ),
@@ -1555,20 +1550,20 @@ class _ProtectionPageState extends State<ProtectionPage> {
             const SizedBox(height: 8),
             Text(
               'Esta secao mostra todas as funcoes disponiveis no navegador e o nivel real de cobertura de cada uma.',
-              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
             ),
             const SizedBox(height: 14),
             _buildFeatureDetail(
-              title: 'Tunel VPN e status de conexao',
+              title: 'Conexao protegida e status',
               active: status.isVPNActive,
               whatItProtects: 'Sigilo de rota e encapsulamento do trafego do app.',
-              webBehavior: 'No Web, o painel valida o fluxo de ligar/desligar e status. O tunel de sistema operacional nao e aplicado no navegador.',
+              webBehavior: 'No Web, o painel valida o fluxo de ligar, desligar e status. A integracao nativa do sistema nao e aplicada no navegador.',
             ),
             _buildFeatureDetail(
-              title: 'Kill Switch',
+              title: 'Bloqueio preventivo',
               active: status.isKillSwitchActive,
-              whatItProtects: 'Evita vazamento de trafego quando a VPN cai.',
-              webBehavior: 'No Web, representa o estado de protecao no app. Bloqueio global de rede (iptables/Network Extension) e recurso nativo de Android/iOS.',
+              whatItProtects: 'Limita trafego do app quando a conexao protegida fica instavel.',
+              webBehavior: 'No Web, o painel demonstra o estado do recurso e o fluxo de ativacao dentro do app.',
             ),
             _buildFeatureDetail(
               title: 'DNS sobre HTTPS (DoH)',
@@ -1583,12 +1578,12 @@ class _ProtectionPageState extends State<ProtectionPage> {
               webBehavior: 'Aplicado no cabecalho das requisicoes do app e rotacao de valores para reduzir correlacao.',
             ),
             _buildFeatureDetail(
-              title: 'Deteccao de ameacas e integridade',
+              title: 'Verificacoes locais e integridade',
               active: status.threatDetectionActive,
-              whatItProtects: 'Alerta sobre risco de root/jailbreak, ambiente inseguro e sinais de comprometimento.',
+              whatItProtects: 'Exibe verificacoes locais de integridade e sinais basicos do dispositivo.',
               webBehavior: hasErrorState
-                  ? 'Erro no estado atual. Verifique o card de erro acima para diagnostico.'
-                  : 'No navegador, verificacoes nativas profundas ficam limitadas; o painel continua exibindo status e resumo de riscos.',
+                  ? 'Erro no estado atual. Verifique o card acima para mais detalhes.'
+                  : 'No navegador, algumas verificacoes do sistema operacional ficam limitadas; o painel continua exibindo status e resumo local.',
             ),
             const SizedBox(height: 8),
             Container(
@@ -1601,22 +1596,22 @@ class _ProtectionPageState extends State<ProtectionPage> {
               ),
               child: Text(
                 status.activeThreats.isEmpty
-                    ? 'Resumo atual: nenhuma ameaca ativa detectada no estado atual.'
-                    : 'Resumo atual de ameacas: ${status.threatsSummary}',
-                style: const TextStyle(fontSize: 12),
+                    ? 'Resumo atual: nenhuma observacao adicional no estado atual.'
+                    : 'Resumo atual: ${status.threatsSummary}',
+                style: const TextStyle(fontSize: 14),
               ),
             ),
             const SizedBox(height: 10),
             const Text(
               'Cobertura atual da versao Web',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
             const SizedBox(height: 6),
             const Text(
               '• Protege o fluxo interno do app com politicas de privacidade e status de seguranca\n'
-              '• Exibe monitoramento, risco e eventos para validacao funcional\n'
-              '• Nao substitui as protecoes nativas de rede em nivel de sistema (Android/iOS)',
-              style: TextStyle(fontSize: 12),
+              '• Exibe status, verificacoes locais e eventos para validacao funcional\n'
+              '• Nao substitui protecoes fornecidas pelo sistema operacional',
+              style: TextStyle(fontSize: 14),
             ),
             if (kIsWeb) ...[
               const SizedBox(height: 10),
@@ -1628,8 +1623,8 @@ class _ProtectionPageState extends State<ProtectionPage> {
                   border: Border.all(color: Colors.amber[300]!),
                 ),
                 child: const Text(
-                  'Ambiente Web detectado: este painel foi desenhado para demonstrar e validar as funcionalidades de seguranca sem depender de VPN nativa no dispositivo.',
-                  style: TextStyle(fontSize: 12),
+                  'Ambiente Web detectado: este painel foi desenhado para demonstrar e validar as funcionalidades de seguranca sem depender de integracao nativa do dispositivo.',
+                  style: TextStyle(fontSize: 14),
                 ),
               ),
             ],
@@ -1668,13 +1663,13 @@ class _ProtectionPageState extends State<ProtectionPage> {
 
         if (_autoBlockOnCriticalRisk && scanResult.hasCriticalRisk) {
           await _activateEmergencyBlock();
-          _addLogEntry('🛑 Ativacao bloqueada automaticamente por risco critico.');
+          _addLogEntry('🛑 Ativacao pausada automaticamente para revisao.');
           return;
         }
 
         final canProceed = await _confirmActivationWithRisk(scanResult);
         if (!canProceed) {
-          _addLogEntry('🛑 Ativacao cancelada apos varredura de risco.');
+          _addLogEntry('🛑 Ativacao cancelada apos revisao da verificacao local.');
           return;
         }
       }
@@ -1683,7 +1678,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
       context.read<ProtectionBloc>().add(StartProtectionEvent(defaultConfig));
 
       if (_phoneTapShieldEnabled) {
-        _addLogEntry('🛡️ Escudo anti-escuta telefonica ativado com protecao total.');
+        _addLogEntry('🛡️ Monitoramento reforcado de permissoes sensiveis ativado.');
       }
     }
   }
@@ -1704,11 +1699,11 @@ class _ProtectionPageState extends State<ProtectionPage> {
         child: BlocListener<ProtectionBloc, ProtectionState>(
           listener: (context, state) {
             if (state is ProtectionActive) {
-              _addLogEntry('✅ VPN Conectada - ${DateTime.now().toIso8601String()}');
+              _addLogEntry('✅ Protecao conectada - ${DateTime.now().toIso8601String()}');
               _alertService.clearReminder('app_disabled');
               _alertService.clearReminder('protection_failure');
             } else if (state is ProtectionInactive) {
-              _addLogEntry('🔓 VPN Desconectada - ${DateTime.now().toIso8601String()}');
+              _addLogEntry('🔓 Protecao desconectada - ${DateTime.now().toIso8601String()}');
               _alertService.upsertReminder(
                 reasonKey: 'app_disabled',
                 title: 'Protecao desativada',
@@ -1720,7 +1715,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
                 _addLogEntry('❌ Erro: ${state.message}');
                 _alertService.upsertReminder(
                   reasonKey: 'protection_failure',
-                  title: 'Falha de seguranca detectada',
+                  title: 'Falha ao atualizar protecao',
                   body: state.message,
                 );
               }
@@ -1919,16 +1914,16 @@ class _ProtectionPageState extends State<ProtectionPage> {
                             'ℹ️ Informações',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontSize: 14,
                             ),
                           ),
                           SizedBox(height: 8),
                           Text(
-                            '• Kill Switch bloqueia tráfego se VPN cair\n'
+                            '• Bloqueio preventivo limita trafego se a conexao protegida cair\n'
                             '• DNS sobre HTTPS (DoH) garante privacidade\n'
                             '• Anti-Fingerprinting mascara sua identidade\n'
-                            '• Detecção contínua de ameaças',
-                            style: TextStyle(fontSize: 11),
+                            '• Verificações locais de integridade',
+                            style: TextStyle(fontSize: 13),
                           ),
                         ],
                       ),
