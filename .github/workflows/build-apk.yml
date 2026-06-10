@@ -185,11 +185,25 @@ jobs:
       - name: Enviar build para App Store Connect
         if: ${{ github.event.inputs.publish_to_app_store_connect != 'false' }}
         run: |
+          IPA_PATH="$(find "$PWD/build/ios/ipa" -name '*.ipa' -print -quit)"
+          LOG_FILE="$(mktemp)"
+
+          set +e
           app-store-connect publish \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --private-key @env:APP_STORE_CONNECT_PRIVATE_KEY \
-            --path "$(find "$PWD/build/ios/ipa" -name '*.ipa' -print -quit)"
+            --path "$IPA_PATH" 2>&1 | tee "$LOG_FILE"
+          PUBLISH_EXIT=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$PUBLISH_EXIT" -ne 0 ]; then
+            if grep -q "UPLOAD SUCCEEDED with no errors" "$LOG_FILE" && grep -q "No errors uploading archive" "$LOG_FILE"; then
+              echo "Apple returned a transient post-upload error after a successful upload. Continuing."
+            else
+              exit "$PUBLISH_EXIT"
+            fi
+          fi
 
       - name: Restaurar keychain padrao
         if: always()
