@@ -3,7 +3,6 @@ import UIKit
 
 @main
 @objc final class AppDelegate: FlutterAppDelegate {
-    private let vpnChannelHandler = VPNMethodChannelHandler()
     private let privacyShieldTag = 901245
 
     override func application(
@@ -14,7 +13,6 @@ import UIKit
             return super.application(application, didFinishLaunchingWithOptions: launchOptions)
         }
 
-        vpnChannelHandler.register(with: controller.binaryMessenger)
         GeneratedPluginRegistrant.register(with: self)
 
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)

@@ -85,11 +85,11 @@ class VPNService {
       }
 
       _subscribeToConnectivityChanges();
-      debugPrint('[VPN] Inicializado com sucesso');
+      debugPrint('[Protection] Inicializado com sucesso');
 
       return const Right(null);
     } catch (e) {
-      return Left(VPNConnectionFailure('Erro ao inicializar VPN: $e'));
+      return Left(VPNConnectionFailure('Erro ao inicializar proteção: $e'));
     }
   }
 
@@ -101,7 +101,7 @@ class VPNService {
       // Ativar Kill Switch ANTES de conectar
       await _activateKillSwitch();
 
-      // Simulação de conexão WireGuard
+      // Simulação de ativação da camada protegida
       await _establishWireGuardConnection();
 
       _vpnInterfaceActive = true;
@@ -128,7 +128,7 @@ class VPNService {
       // Parar monitoramento de Kill Switch
       _stopKillSwitchMonitoring();
 
-      // Desativar interface VPN
+      // Desativar interface protegida
       await _teardownWireGuardConnection();
       _vpnInterfaceActive = false;
 
@@ -220,7 +220,7 @@ class VPNService {
 
   /// Estabelece conexão WireGuard
   Future<void> _establishWireGuardConnection() async {
-    // Simular handshake WireGuard
+    // Simular ativação da camada protegida
     await Future.delayed(const Duration(seconds: 2));
 
     // TODO: Implementar via platform channel:
@@ -228,7 +228,7 @@ class VPNService {
     // 2. Executar: wg-quick up wg0 (Android) ou carregar config (iOS)
     // 3. Verificar conectividade através do túnel
 
-    debugPrint('[WireGuard] Tunel estabelecido');
+    debugPrint('[Protection] Camada protegida estabelecida');
   }
 
   /// Encerra conexão WireGuard
@@ -237,7 +237,7 @@ class VPNService {
     // 1. Executar: wg-quick down wg0 (Android)
     // 2. Limpar configurações (iOS)
 
-    debugPrint('[WireGuard] Tunel encerrado');
+    debugPrint('[Protection] Camada protegida encerrada');
   }
 
   /// Se inscreve nas mudanças de conectividade para reativar VPN
@@ -251,7 +251,7 @@ class VPNService {
       } else if (result != ConnectivityResult.none &&
           _currentState == VPNConnectionState.error) {
         // Rede recuperada - tentar reconectar
-        debugPrint('[VPN] Rede recuperada, tentando reconectar...');
+        debugPrint('[Protection] Rede recuperada, tentando reconectar...');
         await connectToVPN();
       }
     });

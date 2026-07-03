@@ -21,7 +21,7 @@ import com.infinityprox.vpn.VPNConfig
 import com.infinityprox.vpn.VPNServiceManager
 
 class MainActivity: FlutterActivity() {
-    private val vpnChannelName = "com.infinityprox/vpn"
+    private val vpnChannelName = "com.infinityprox/protection"
     private val securityChannelName = "com.infinityprox/security"
     private val duressChannelName = "com.infinityprox/duress"
     private val nativeSafetyPrefs = "native_safety_mode"
@@ -51,21 +51,21 @@ class MainActivity: FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, vpnChannelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "startVPN" -> {
+                    "startProtection" -> {
                         val config = call.arguments as? Map<String, Any>
                         startVPN(config, result)
                     }
-                    "stopVPN" -> {
+                    "stopProtection" -> {
                         stopVPN(result)
                     }
-                    "getVPNStatus" -> {
+                    "getProtectionStatus" -> {
                         getVPNStatus(result)
                     }
-                    "setKillSwitch" -> {
+                    "setProtectionBlock" -> {
                         val enabled = call.argument<Boolean>("enabled") ?: false
                         setKillSwitch(enabled, result)
                     }
-                    "triggerEmergencyBlock" -> {
+                    "triggerProtectionBlock" -> {
                         triggerEmergencyBlock(result)
                     }
                     else -> result.notImplemented()
@@ -138,13 +138,13 @@ class MainActivity: FlutterActivity() {
 
             vpnService.startVPN(vpnConfig) { success, error ->
                 if (success) {
-                    result.success(mapOf("status" to "VPN_STARTING"))
+                    result.success(mapOf("status" to "PROTECTION_STARTING"))
                 } else {
-                    result.error("VPN_ERROR", error, null)
+                    result.error("PROTECTION_ERROR", error, null)
                 }
             }
         } catch (e: Exception) {
-            result.error("START_VPN_ERROR", e.message, e.stackTrace.toString())
+            result.error("START_PROTECTION_ERROR", e.message, e.stackTrace.toString())
         }
     }
 
@@ -153,13 +153,13 @@ class MainActivity: FlutterActivity() {
             val vpnService = VPNServiceManager(this)
             vpnService.stopVPN() { success, error ->
                 if (success) {
-                    result.success(mapOf("status" to "VPN_STOPPING"))
+                    result.success(mapOf("status" to "PROTECTION_STOPPING"))
                 } else {
-                    result.error("VPN_ERROR", error, null)
+                    result.error("PROTECTION_ERROR", error, null)
                 }
             }
         } catch (e: Exception) {
-            result.error("STOP_VPN_ERROR", e.message, e.stackTrace.toString())
+            result.error("STOP_PROTECTION_ERROR", e.message, e.stackTrace.toString())
         }
     }
 

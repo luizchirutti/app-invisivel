@@ -8,10 +8,10 @@ class SecurityConstants {
   static const int GCM_TAG_SIZE = 128; // bits (16 bytes)
 
   // ==================== VPN ====================
-  /// Protocolo VPN: WireGuard
-  static const String VPN_PROTOCOL = 'WireGuard';
+  /// Identificador interno da camada protegida
+  static const String VPN_PROTOCOL = 'camada protegida';
   static const int WIREGUARD_PORT = 51820;
-  static const String WIREGUARD_INTERFACE = 'wg0';
+  static const String WIREGUARD_INTERFACE = 'protected0';
 
   /// Kill Switch: Bloqueia tráfego se VPN cair
   static const bool ENABLE_KILL_SWITCH = true;

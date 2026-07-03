@@ -67,7 +67,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
   final SecurityAlertService _alertService = SecurityAlertService();
   final DuressSecurityService _duressSecurityService = DuressSecurityService();
   final TextEditingController _unlockController = TextEditingController();
-  static const MethodChannel _vpnChannel = MethodChannel('com.infinityprox/vpn');
+  static const MethodChannel _vpnChannel = MethodChannel('com.infinityprox/protection');
   static const MethodChannel _securityChannel = MethodChannel('com.infinityprox/security');
 
   bool _isScanning = false;
@@ -465,7 +465,7 @@ class _ProtectionPageState extends State<ProtectionPage> {
   Future<void> _activateEmergencyBlock() async {
     try {
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-        await _vpnChannel.invokeMapMethod<String, dynamic>('triggerEmergencyBlock');
+        await _vpnChannel.invokeMapMethod<String, dynamic>('triggerProtectionBlock');
       }
       _addLogEntry('⚠️ Resposta automatica ativada apos verificacao local.');
     } catch (_) {

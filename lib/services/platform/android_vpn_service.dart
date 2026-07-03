@@ -4,12 +4,12 @@ import '../vpn/vpn_service.dart';
 import 'platform_vpn_service.dart';
 
 class AndroidVPNService implements PlatformVPNService {
-  static const MethodChannel _vpnChannel = MethodChannel('com.infinityprox/vpn');
+  static const MethodChannel _vpnChannel = MethodChannel('com.infinityprox/protection');
   static const MethodChannel _securityChannel = MethodChannel('com.infinityprox/security');
 
   @override
   Future<bool> startVPN(VPNConfig config) async {
-    final response = await _vpnChannel.invokeMapMethod<String, dynamic>('startVPN', {
+    final response = await _vpnChannel.invokeMapMethod<String, dynamic>('startProtection', {
       'serverAddress': config.serverAddress,
       'port': config.port,
       'privateKey': config.privateKey,
@@ -19,18 +19,18 @@ class AndroidVPNService implements PlatformVPNService {
       'dnsServers': config.dnsServers,
     });
 
-    return response?['status'] == 'VPN_STARTING';
+    return response?['status'] == 'PROTECTION_STARTING';
   }
 
   @override
   Future<bool> stopVPN() async {
-    final response = await _vpnChannel.invokeMapMethod<String, dynamic>('stopVPN');
-    return response?['status'] == 'VPN_STOPPING';
+    final response = await _vpnChannel.invokeMapMethod<String, dynamic>('stopProtection');
+    return response?['status'] == 'PROTECTION_STOPPING';
   }
 
   @override
   Future<Map<String, dynamic>> getVPNStatus() async {
-    final response = await _vpnChannel.invokeMapMethod<String, dynamic>('getVPNStatus');
+    final response = await _vpnChannel.invokeMapMethod<String, dynamic>('getProtectionStatus');
     return response ?? <String, dynamic>{
       'isConnected': false,
       'status': 'UNKNOWN',
@@ -39,7 +39,7 @@ class AndroidVPNService implements PlatformVPNService {
 
   @override
   Future<bool> setKillSwitch(bool enabled) async {
-    final response = await _vpnChannel.invokeMapMethod<String, dynamic>('setKillSwitch', {
+    final response = await _vpnChannel.invokeMapMethod<String, dynamic>('setProtectionBlock', {
       'enabled': enabled,
     });
     return response?['killSwitch'] == enabled;

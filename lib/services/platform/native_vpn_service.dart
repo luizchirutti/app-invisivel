@@ -58,7 +58,7 @@ class NativeVPNStatus {
 
 /// Serviço de VPN nativa usando platform channels
 class NativeVPNService {
-  static const String _vpnChannelName = 'com.infinityprox/vpn';
+  static const String _vpnChannelName = 'com.infinityprox/protection';
   static const String _securityChannelName = 'com.infinityprox/security';
 
   static final NativeVPNService _instance = NativeVPNService._internal();
@@ -83,7 +83,7 @@ class NativeVPNService {
 
     if (!Platform.isAndroid && !Platform.isIOS) {
       throw UnsupportedError(
-        'Native VPN Services only supported on Android and iOS',
+        'Native protection services only supported on Android and iOS',
       );
     }
 
@@ -98,13 +98,13 @@ class NativeVPNService {
       await initialize();
 
       final result = await _vpnChannel.invokeMethod<Map>(
-        'startVPN',
+        'startProtection',
         config.toMap(),
       );
 
-      return result?['status'] == 'VPN_STARTING';
+      return result?['status'] == 'PROTECTION_STARTING';
     } on PlatformException catch (e) {
-      throw Exception('Erro ao iniciar VPN: ${e.message}');
+      throw Exception('Erro ao iniciar proteção: ${e.message}');
     }
   }
 
@@ -113,11 +113,11 @@ class NativeVPNService {
     try {
       await initialize();
 
-      final result = await _vpnChannel.invokeMethod<Map>('stopVPN');
+      final result = await _vpnChannel.invokeMethod<Map>('stopProtection');
 
-      return result?['status'] == 'VPN_STOPPING';
+      return result?['status'] == 'PROTECTION_STOPPING';
     } on PlatformException catch (e) {
-      throw Exception('Erro ao parar VPN: ${e.message}');
+      throw Exception('Erro ao parar proteção: ${e.message}');
     }
   }
 
@@ -126,7 +126,7 @@ class NativeVPNService {
     try {
       await initialize();
 
-      final result = await _vpnChannel.invokeMethod<Map>('getVPNStatus');
+      final result = await _vpnChannel.invokeMethod<Map>('getProtectionStatus');
 
       if (result == null) {
         return NativeVPNStatus(
@@ -152,7 +152,7 @@ class NativeVPNService {
       await initialize();
 
       final result = await _vpnChannel.invokeMethod<Map>(
-        'setKillSwitch',
+        'setProtectionBlock',
         {'enabled': enabled},
       );
 
